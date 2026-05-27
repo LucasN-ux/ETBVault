@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Etb {
+  id             String           @id
+  nom            String
+  setId          String           @map("set_id")
+  era            String?
+  imageUrl       String?          @map("image_url")
+  boxImageUrl    String?          @map("box_image_url")
+  dateSortie     DateTime?        @map("date_sortie") @db.Date
+  prixSortie     Decimal?         @map("prix_sortie") @db.Decimal(10, 2)
+  contenu        Json?
+  cmUrl          String?          @map("cm_url")
+  cartes         Carte[]
+  prixHistorique PrixHistorique[]
+  vaultEntries   VaultEntry[]
+
+  @@map("etbs")
+}
+
+model Carte {
+  id         String   @id
+  etbId      String   @map("etb_id")
+  nom        String
+  numero     String?
+  imageUrl   String?  @map("image_url")
+  rarete     String?
+  prixMarche Decimal? @map("prix_marche") @db.Decimal(10, 2)
+  misAJour   DateTime @default(now()) @map("mis_a_jour")
+  etb        Etb      @relation(fields: [etbId], references: [id])
+
+  @@map("cartes")
+}
+
+// ── Vault utilisateur ─────────────────────────────────────────────────────────
+// V1 : données en localStorage côté client, pas de userId
+// V2 : activer userId + relation User quand l'auth sera en place
+model VaultEntry {
+  id         Int      @id @default(autoincrement())
+  etbId      String   @map("etb_id")
+  prixAchat  Decimal  @map("prix_achat") @db.Decimal(10, 2)
+  quantite   Int      @default(1)
+  dateAchat  DateTime @map("date_achat") @db.Date
+  createdAt  DateTime @default(now()) @map("created_at")
+  // userId  String   @map("user_id")   ← décommenter en V2
+  // user    User     @relation(fields: [userId], references: [id])
+  etb        Etb      @relation(fields: [etbId], references: [id])
+
+  @@map("vault_entries")
+}
+
+model PrixHistorique {
+  id            Int      @id @default(autoincrement())
+  etbId         String   @map("etb_id")
+  date          DateTime @db.Date
+  cmPrixMoyen   Decimal? @map("cm_prix_moyen") @db.Decimal(10, 2)
+  cmPrixBas     Decimal? @map("cm_prix_bas") @db.Decimal(10, 2)
+  cmNbAnnonces      Int?     @map("cm_nb_annonces")
+  ebayPrixMoyen     Decimal? @map("ebay_prix_moyen") @db.Decimal(10, 2)
+  valeurTop10Cartes Decimal? @map("valeur_top10_cartes") @db.Decimal(10, 2)
+  score             Int?
+  scoreDetail       Json?    @map("score_detail")
+  etb           Etb      @relation(fields: [etbId], references: [id])
+
+  @@unique([etbId, date])
+  @@map("prix_historique")
+}
