@@ -1,7 +1,6 @@
 import { Router, type Request, type Response } from 'express'
 import prisma from '../db/client'
-import { calculerScore } from '../services/scoring'
-import { scrapeCardmarket, delaiAleatoire } from '../services/scraper'
+import { detecterMouvement } from '../services/mouvement'
 
 // mergeParams permet d'accéder à :id défini dans app.ts
 const router = Router({ mergeParams: true })
@@ -44,10 +43,14 @@ router.post('/', async (req: Request, res: Response) => {
     return
   }
 
-  const { date, cmPrixMoyen, cmPrixBas, cmNbAnnonces, ebayPrixMoyen } = req.body as Record<string, unknown>
+  const { date, cmPrixMoyen, cmPrixBas, cmNbAnnonces, ebayPrixMoyen, origine } = req.body as Record<string, unknown>
 
   if (!dateValide(date)) {
     res.status(400).json({ error: 'Champ date invalide (format YYYY-MM-DD attendu)' })
+    return
+  }
+  if (origine !== undefined && origine !== 'collecte' && origine !== 'import_cm') {
+    res.status(400).json({ error: "origine doit valoir 'collecte' ou 'import_cm'" })
     return
   }
   if (cmPrixMoyen !== undefined && !prixValide(cmPrixMoyen)) {
@@ -76,6 +79,7 @@ router.post('/', async (req: Request, res: Response) => {
       ...(cmPrixBas !== undefined && { cmPrixBas: cmPrixBas as number }),
       ...(cmNbAnnonces !== undefined && { cmNbAnnonces: cmNbAnnonces as number }),
       ...(ebayPrixMoyen !== undefined && { ebayPrixMoyen: ebayPrixMoyen as number }),
+      ...(origine !== undefined && { origine: origine as string }),
     }
     const entry = await prisma.prixHistorique.upsert({
       where: { etbId_date: { etbId: id, date: new Date(date) } },
@@ -110,8 +114,9 @@ router.get('/latest', async (req: Request, res: Response) => {
   }
 })
 
-// GET /api/etbs/:id/prix/score — calcule le score d'investissement
-router.get('/score', async (req: Request, res: Response) => {
+// GET /api/etbs/:id/prix/mouvement — détecte les mouvements de prix (court/long terme),
+// adaptés à la volatilité propre de l'ETB. Remplace l'ancien score d'investissement.
+router.get('/mouvement', async (req: Request, res: Response) => {
   const { id } = req.params as { id: string }
   if (!etbIdValide(id)) {
     res.status(400).json({ error: 'Identifiant ETB invalide' })
@@ -124,63 +129,15 @@ router.get('/score', async (req: Request, res: Response) => {
       return
     }
 
-    // Les 2 derniers points disponibles (données mensuelles)
+    // Tout l'historique de prix (collecte + import), pour calculer la volatilité propre
     const historique = await prisma.prixHistorique.findMany({
-      where: { etbId: id },
+      where: { etbId: id, cmPrixMoyen: { not: null } },
       orderBy: { date: 'asc' },
-      take: -2,
+      select: { date: true, cmPrixMoyen: true },
     })
 
-    // Valeur top-10 cartes du set
-    const topCartes = await prisma.carte.findMany({
-      where: { etbId: id, prixMarche: { gt: 0 } },
-      orderBy: { prixMarche: 'desc' },
-      take: 10,
-    })
-    const valeurTop10 = topCartes.reduce((s, c) => s + Number(c.prixMarche ?? 0), 0)
-
-    const resultat = calculerScore(historique, etb.prixSortie, valeurTop10 || null)
+    const resultat = detecterMouvement(historique)
     res.json({ etbId: id, ...resultat })
-  } catch (e) {
-    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' })
-  }
-})
-
-// POST /api/etbs/:id/prix/refresh — déclenche un scraping immédiat (hors cron)
-// Utile pour tester ou forcer une mise à jour manuelle
-router.post('/refresh', async (req: Request, res: Response) => {
-  const { id } = req.params as { id: string }
-  if (!etbIdValide(id)) {
-    res.status(400).json({ error: 'Identifiant ETB invalide' })
-    return
-  }
-  try {
-    const etb = await prisma.etb.findUnique({ where: { id } })
-    if (!etb) { res.status(404).json({ error: 'ETB non trouvée' }); return }
-    if (!etb.cmUrl) {
-      res.status(422).json({ error: 'Aucune URL Cardmarket configurée pour cette ETB' })
-      return
-    }
-
-    // Délai poli avant de scraper (même en manuel)
-    await delaiAleatoire(1_000, 3_000)
-    const prix = await scrapeCardmarket(etb.cmUrl)
-
-    const aujourd = new Date()
-    aujourd.setHours(0, 0, 0, 0)
-
-    const champsScrapés = {
-      cmPrixBas:    prix.prixBas,
-      cmPrixMoyen:  prix.prixMoyen ?? prix.prixBas,
-      cmNbAnnonces: prix.nbAnnonces,
-    }
-    const entry = await prisma.prixHistorique.upsert({
-      where: { etbId_date: { etbId: id, date: aujourd } },
-      update: champsScrapés,
-      create: { etbId: id, date: aujourd, ...champsScrapés },
-    })
-
-    res.json({ scraped: prix, saved: entry })
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' })
   }
