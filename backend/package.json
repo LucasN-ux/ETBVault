@@ -9,6 +9,8 @@
     "typecheck": "tsc --noEmit",
     "seed": "node src/db/seed.js",
     "seed:prix": "node src/db/seedPrix.js",
+    "refresh:etb": "tsx src/db/run-cm-refresh.ts",
+    "boxes": "python3 src/db/remove-bg-boxes.py && node src/db/update-box-images.js",
     "test": "jest --testEnvironment node"
   },
   "dependencies": {

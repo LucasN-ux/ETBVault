@@ -94,51 +94,17 @@ app.get('/api/tendances', async (req, res) => {
   }
 })
 
-// GET /api/era-stats?era=... — multiples de valorisation de tous les ETBs d'une même ère
-// Permet de comparer un ETB par rapport à ses pairs de la même génération
-app.get('/api/era-stats', async (req, res) => {
-  const { default: prisma } = await import('./db/client')
-  const era = req.query['era'] as string | undefined
-  if (!era) { res.status(400).json({ error: 'Paramètre era requis' }); return }
-  try {
-    const etbs = await prisma.etb.findMany({
-      where: { era },
-      select: {
-        id: true,
-        nom: true,
-        prixSortie: true,
-        prixHistorique: {
-          where: { cmPrixMoyen: { not: null } },
-          orderBy: { date: 'desc' },
-          take: 1,
-          select: { cmPrixMoyen: true },
-        },
-      },
-    })
-    const avecPrix = etbs
-      .filter((e) => e.prixSortie && e.prixHistorique[0]?.cmPrixMoyen)
-      .map((e) => ({
-        id: e.id,
-        nom: e.nom,
-        multiple: Math.round(Number(e.prixHistorique[0]!.cmPrixMoyen) / Number(e.prixSortie) * 100) / 100,
-      }))
-      .sort((a, b) => b.multiple - a.multiple)
-    const avg = avecPrix.length > 0
-      ? Math.round(avecPrix.reduce((s, e) => s + e.multiple, 0) / avecPrix.length * 100) / 100
-      : 0
-    res.json({ era, count: avecPrix.length, multiples: avecPrix, avgMultiple: avg })
-  } catch (e) {
-    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' })
-  }
-})
-
-// POST /api/admin/refresh-prix — déclenche manuellement le téléchargement CM
-// Utile pour tester ou forcer une mise à jour sans attendre le cron
-app.post('/api/admin/refresh-prix', async (_req, res) => {
+// POST /api/admin/refresh — déclenche manuellement les deux mises à jour
+// ETB (Cardmarket) + cartes (TCGdex) — upsert, sans doublon
+app.post('/api/admin/refresh', async (_req, res) => {
   const { mettreAJourPrixDepuisCM } = await import('./services/cm-download')
+  const { mettreAJourPrixCartes } = await import('./cron/prix-cartes')
   try {
-    const result = await mettreAJourPrixDepuisCM()
-    res.json({ success: true, ...result })
+    console.log('[admin/refresh] Lancement mise à jour ETB...')
+    const { ok, sans_prix } = await mettreAJourPrixDepuisCM()
+    console.log('[admin/refresh] Lancement mise à jour cartes...')
+    await mettreAJourPrixCartes()
+    res.json({ success: true, etbMisAJour: ok, etbSansPrix: sans_prix })
   } catch (e) {
     res.status(500).json({ success: false, error: e instanceof Error ? e.message : 'Erreur' })
   }
