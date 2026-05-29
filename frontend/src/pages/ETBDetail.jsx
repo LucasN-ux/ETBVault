@@ -121,6 +121,12 @@ export default function ETBDetail() {
     : '—'
   const contenu = etb.contenu || {}
 
+  // Lien vers la fiche Cardmarket : URL produit si on l'a, sinon recherche CM par nom.
+  const cmUrl = etb.cmUrl ?? etb.cm_url
+  const lienCardmarket = cmUrl
+    ? cmUrl
+    : `https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString=${encodeURIComponent(`${etb.nom} Elite Trainer Box`)}`
+
   return (
     <div className="flex flex-col h-full overflow-y-auto">
 
@@ -199,6 +205,18 @@ export default function ETBDetail() {
                   </span>
                 ))}
               </div>
+
+              {/* Invitation (non intrusive) à consulter/acheter sur Cardmarket */}
+              <a
+                href={lienCardmarket}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 mt-3 bg-pokemon-yellow/10 hover:bg-pokemon-yellow/20 text-pokemon-yellow border border-pokemon-yellow/30 font-semibold text-xs px-4 py-2 rounded-lg transition-colors"
+              >
+                Voir les offres sur Cardmarket
+                <span aria-hidden>→</span>
+              </a>
+              <p className="text-gray-600 text-[10px] mt-1">Comparez les vendeurs · vous quitterez ETBVault</p>
             </div>
           </div>
 
