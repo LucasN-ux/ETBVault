@@ -28,10 +28,10 @@ export async function fetchPrixHistorique(etbId) {
   return res.json()
 }
 
-// Récupère le score d'investissement d'une ETB
-export async function fetchScore(etbId) {
-  const res = await fetch(`${BASE_URL}/etbs/${etbId}/prix/score`)
-  if (!res.ok) throw new Error('Score non disponible')
+// Récupère la détection de mouvement adaptative d'une ETB (court/long terme)
+export async function fetchMouvement(etbId) {
+  const res = await fetch(`${BASE_URL}/etbs/${etbId}/prix/mouvement`)
+  if (!res.ok) throw new Error('Mouvement non disponible')
   return res.json()
 }
 
@@ -54,13 +54,6 @@ export async function fetchPrixHistoriqueMultiple(ids) {
     )
   )
   return Object.fromEntries(ids.map((id, i) => [id, results[i]]))
-}
-
-// Récupère les multiples de valorisation de tous les ETBs d'une même ère
-export async function fetchEraStats(era) {
-  const res = await fetch(`${BASE_URL}/era-stats?era=${encodeURIComponent(era)}`)
-  if (!res.ok) throw new Error('Statistiques ère non disponibles')
-  return res.json()
 }
 
 // Récupère les ETBs triées par momentum récent (variation sur N jours)
