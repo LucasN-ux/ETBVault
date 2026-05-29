@@ -1,103 +1,54 @@
 import { useNavigate } from 'react-router-dom'
 
+// Ce qu'ETBVault fait — des FAITS, pas des conseils.
+// (Le score d'investissement et l'analyse spéculative ont été retirés le 2026-05-29.)
 const SIGNAUX = [
   {
-    icon: '📈',
-    titre: 'Tendance de prix Cardmarket',
-    source: 'Cardmarket (scraping quotidien)',
+    icon: '💶',
+    titre: 'Prix Cardmarket',
+    source: 'Cardmarket (collecte quotidienne)',
     description:
-      'Le prix moyen de tendance et le prix le plus bas disponible sur Cardmarket, mis à jour chaque nuit. C\'est notre signal de référence — le marché européen du scellé Pokémon se fait principalement sur CM.',
+      'Le prix de tendance et le prix le plus bas disponible sur Cardmarket, relevés chaque nuit. C\'est le prix courant affiché : le marché européen du scellé Pokémon se fait principalement sur CM.',
     limites: [
-      'Représente le prix affiché, pas le prix réellement vendu.',
+      'Représente le prix affiché, pas forcément le prix réellement vendu.',
       'CM est le marché EU — les prix japonais ou américains peuvent diverger.',
-      'Les données manquent si le scraping échoue ou si l\'ETB n\'est pas encore référencée.',
+      'La donnée manque si la collecte échoue ou si l\'ETB n\'est pas encore référencée.',
     ],
   },
   {
-    icon: '🔄',
-    titre: 'Phase du cycle de vie',
-    source: 'Calculé — prix actuel ÷ prix de sortie + âge du set',
+    icon: '📉',
+    titre: 'Graphique de prix fidèle',
+    source: 'Points réellement collectés + historique importé',
     description:
-      'On situe chaque ETB dans l\'un des 4 stades de son cycle : Sortie (< 6 mois, prix stable), Distribution (prix proche du MSRP, fenêtre d\'achat), Valorisation (prix commence à monter, stock se raréfie), Maturité (prix établi haut, gains futurs limités).',
+      'Le prix est collecté chaque jour, mais la courbe n\'affiche pas un point par jour : elle ne « bouge » que lorsque le prix varie de façon significative (un mouvement de moins de 1% est ignoré, la courbe reste plate). Pas de moyenne mensuelle artificielle, et sur les longues périodes on réduit encore via LTTB en conservant pics, creux et ruptures.',
     limites: [
-      'Les seuils (×1.15, ×1.3, ×2.0) sont basés sur l\'observation du marché, pas sur des lois économiques absolues.',
-      'Un set peut sauter directement de la phase 1 à la phase 4 en cas de hype soudaine ou réimpression.',
-      'Sans prix de sortie officiel dans la base, la phase est non calculable.',
+      'Un mouvement sous le seuil (~1%) n\'apparaît pas — c\'est volontaire, pour ne pas afficher le bruit quotidien.',
+      'À l\'ajout d\'une ETB, une partie de l\'historique peut être importée depuis Cardmarket (marquée « historique importé ») pour amorcer la courbe.',
+      'La profondeur de l\'historique dépend de ce que Cardmarket expose — pas toujours jusqu\'à la date de sortie.',
     ],
   },
   {
-    icon: '📊',
-    titre: 'ROI annualisé (CAGR)',
-    source: 'Calculé — (prix actuel ÷ prix sortie)^(1/années) − 1',
+    icon: '📈',
+    titre: 'Détection de mouvement adaptative',
+    source: 'Calculé — volatilité propre de chaque ETB',
     description:
-      'Le rendement annuel moyen depuis la date de sortie, exprimé en pourcentage. Permet de comparer une ETB à d\'autres classes d\'actifs : bourse (~8%/an historique), immobilier (~4%/an), livret A (~3%).',
+      'Au lieu d\'un seuil fixe identique pour toutes, chaque mouvement de prix est jugé par rapport à la volatilité normale de l\'ETB elle-même. Un +5 % sur une boîte habituellement stable est signalé « fort » ; le même +5 % sur une ETB volatile reste « faible ». On l\'affiche sur deux horizons : court terme (30 jours) et long terme (6 mois).',
     limites: [
-      'Calculé uniquement si l\'ETB a au moins 6 mois d\'historique — trop tôt sinon, le chiffre n\'a pas de sens.',
-      'Le passé ne prédit pas le futur. Un CAGR de 30%/an ne garantit pas 30% l\'année prochaine.',
-      'Ne prend pas en compte la liquidité — une ETB à 400€ et une à 80€ peuvent avoir le même CAGR mais des risques très différents.',
+      'C\'est un constat d\'évolution, pas une prédiction ni un conseil d\'achat.',
+      'Sur les premières semaines (historique court), le niveau est approximatif (repli sur des seuils absolus).',
+      'Ne dit rien des causes : une réimpression, une hype ou une simple correction produisent le même signal.',
     ],
   },
   {
-    icon: '🃏',
-    titre: 'Pression de déscellage',
-    source: 'TCGdex (prix des cartes CM) + prix CM de la boîte scellée',
+    icon: '🔒',
+    titre: 'Coffre-fort & plus-value',
+    source: 'Vos achats (localStorage) × prix Cardmarket courant',
     description:
-      'Ratio entre la valeur des 10 cartes les plus chères du set et le prix actuel de la boîte scellée. Quand ce ratio dépasse 1, les gens ont intérêt à acheter pour ouvrir — ce qui consomme le stock scellé et fait mécaniquement monter les prix.',
+      'Vous enregistrez vos ETB achetées avec leur prix d\'achat. ETBVault calcule en direct votre plus-value ou moins-value (prix courant − prix d\'achat) et la valeur totale de votre coffre.',
     limites: [
-      'On prend les 10 cartes les plus chères, pas toutes les cartes. C\'est une valeur de pic, pas une espérance de gain réelle par boîte ouverte.',
-      'Les taux de tirage ne sont pas inclus — une carte à 200€ qui sort 1 fois pour 200 boosters ne vaut pas la même chose qu\'une carte à 20€ qui sort souvent.',
-      'Signal pertinent surtout pour les sets récents (< 3 ans). Pour le vintage, le scellé a une valeur indépendante des cartes.',
-    ],
-  },
-  {
-    icon: '🔍',
-    titre: 'Nature de la hausse',
-    source: 'Calculé — croise la pression déscellage et la tendance de prix',
-    description:
-      'Tente de distinguer si la hausse de prix est due à la valeur des cartes intérieures (fondamentale, plus durable) ou à la simple rareté du scellé sur le marché (spéculative, plus volatile). Une hausse portée par les cartes est en général plus solide qu\'une hausse portée uniquement par la pénurie.',
-    limites: [
-      'Signal qualitatif basé sur seulement deux variables — beaucoup de nuances sont perdues.',
-      'Nécessite au moins 3 points de prix pour détecter une tendance.',
-      'Les deux causes peuvent se combiner et se renforcer — la séparation est une simplification.',
-    ],
-  },
-  {
-    icon: '🏆',
-    titre: 'Position dans l\'ère',
-    source: 'Calculé — multiple de chaque ETB de la même génération',
-    description:
-      'Compare le multiple de valorisation (prix actuel ÷ prix de sortie) de cette ETB avec tous ses pairs de la même ère (Écarlate et Violet, Épée et Bouclier, etc.). Permet de voir si elle sur-performe ou sous-performe sa génération.',
-    limites: [
-      'Uniquement valable si plusieurs ETBs de l\'ère ont des prix renseignés — la comparaison est faussée si le catalogue est incomplet.',
-      'Des ères différentes ne se comparent pas : une ère "Noir et Blanc" avec des ×8 est normale vu l\'ancienneté, une ère récente avec un ×8 serait extraordinaire.',
-    ],
-  },
-  {
-    icon: '💰',
-    titre: 'Ticket d\'entrée & Profil risque',
-    source: 'Calculé — quartiles des prix actuels du catalogue',
-    description:
-      'Classe l\'ETB dans les 4 quartiles de prix du vault (Accessible / Intermédiaire / Élevé / Premium) basé sur les prix réels de toutes les ETBs du catalogue. Croise cette info avec la phase du cycle pour donner un profil global : Opportunité, Favorable, Spéculatif, Investissement lourd.',
-    limites: [
-      'Les quartiles sont calculés sur le catalogue actuel — ils se déplacent à mesure que les prix évoluent.',
-      'Le profil "Opportunité" ne garantit pas un gain. Il signifie uniquement que le capital est faible ET que le set est tôt dans son cycle.',
-      'La liquidité est estimée par le prix, pas mesurée réellement (on n\'a pas le nombre d\'annonces disponibles).',
-    ],
-  },
-  {
-    icon: '⭐',
-    titre: 'Score d\'investissement (0–100)',
-    source: '5 critères pondérés — Cardmarket + TCGdex + prix de sortie officiel',
-    description: `Score composite calculé à partir de 5 critères :
-• Tendance 30j (25%) — variation de prix sur les 30 derniers jours
-• Stock disponible (20%) — proxy via cmNbAnnonces (si disponible)
-• Ratio prix/sortie (20%) — à quel multiple du prix de sortie se situe-t-on
-• Valeur pulls (20%) — valeur des cartes du set vs prix de la boîte
-• Intérêt communautaire (15%) — fixé à 50/100 en V1, données non disponibles`,
-    limites: [
-      'Le critère "intérêt communautaire" est neutre (50/100) en V1 — les données réelles (Google Trends, forums) ne sont pas encore intégrées.',
-      'Un score élevé maintenant ne prédit pas un score élevé dans 6 mois — recalculé quotidiennement.',
-      'Aucun algorithme ne peut anticiper une annonce de réimpression.',
+      'La plus-value est « sur le papier » : tant que vous n\'avez pas vendu, c\'est une estimation au prix CM affiché.',
+      'En V1, les données restent sur votre appareil (pas de compte) — videz le cache et elles disparaissent.',
+      'Le prix de vente réel peut différer du prix CM (négociation, frais, état).',
     ],
   },
 ]
@@ -109,7 +60,7 @@ const ANGLES_MORTS = [
     couleur: 'text-red-400',
     bg: 'bg-red-500/10',
     border: 'border-red-500/30',
-    desc: 'C\'est le risque n°1, et on ne peut pas le prévoir. Nintendo peut réimprimer n\'importe quel set à tout moment. Une réimpression peut effacer des années d\'appréciation en quelques semaines. Aucune donnée disponible ne permet d\'anticiper cette décision — elle dépend de la stratégie commerciale interne de Nintendo.',
+    desc: 'Nintendo peut réimprimer un set à tout moment, ce qui fait souvent chuter le prix du scellé. C\'est le principal facteur de baisse imprévue, et aucune donnée publique ne permet de l\'anticiper.',
   },
   {
     titre: 'Signaux communautaires',
@@ -117,31 +68,23 @@ const ANGLES_MORTS = [
     couleur: 'text-orange-400',
     bg: 'bg-orange-500/10',
     border: 'border-orange-500/30',
-    desc: 'Une vidéo YouTube d\'un gros créateur, un tournoi majeur, une rumeur sur Reddit TCG FR ou Discord peuvent créer une hype soudaine qui précède le mouvement de prix de plusieurs semaines. Ces signaux sont humains et non structurés — on ne les capte pas.',
+    desc: 'Vidéos YouTube, tournois, rumeurs Reddit/Discord : ces signaux humains précèdent souvent les mouvements de prix de plusieurs semaines. ETBVault ne les capte pas.',
   },
   {
-    titre: 'Stock réel sur le marché secondaire',
+    titre: 'Stock réel sur le marché',
     niveau: 'Important',
     couleur: 'text-orange-400',
     bg: 'bg-orange-500/10',
     border: 'border-orange-500/30',
-    desc: 'On n\'a pas accès au nombre réel d\'annonces actives sur Cardmarket (cmNbAnnonces non disponible depuis le Price Guide). On utilise le ratio prix_bas/prix_moyen comme proxy, mais ce n\'est qu\'une approximation. Un vendeur qui retire ses annonces peut fausser ce signal sans que rien de réel n\'ait changé.',
+    desc: 'On n\'a pas le nombre réel d\'annonces actives sur Cardmarket. On ne peut donc pas mesurer directement l\'offre disponible — seul le prix est suivi.',
   },
   {
-    titre: 'Taux de pull réels',
+    titre: 'Prix affiché ≠ prix vendu',
     niveau: 'Modéré',
     couleur: 'text-yellow-400',
     bg: 'bg-yellow-500/10',
     border: 'border-yellow-500/30',
-    desc: 'La pression de déscellage suppose que toutes les cartes chères sont tirables équitablement. En réalité, une SIR Charizard peut sortir 1 fois pour 200 boosters. Les probabilités officielles de tirage ne sont pas dans nos données — notre EV est optimiste par construction.',
-  },
-  {
-    titre: 'Événements macro et mode',
-    niveau: 'Modéré',
-    couleur: 'text-yellow-400',
-    bg: 'bg-yellow-500/10',
-    border: 'border-yellow-500/30',
-    desc: 'Une crise économique, un effondrement du marché du scellé Pokémon, un changement de génération (les gens passent à un autre jeu de cartes), ou même une évolution de la culture collector en France peuvent affecter tous les prix simultanément. Ces facteurs dépassent largement le scope de l\'analyse.',
+    desc: 'Le prix CM est le prix demandé par les vendeurs. Le prix réel de transaction peut être inférieur, surtout sur les ETB premium. Anticipez un écart de 5–15 %.',
   },
 ]
 
@@ -157,11 +100,11 @@ export default function Methodology() {
           <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
             <button onClick={() => navigate('/')} className="hover:text-gray-300 transition-colors">Accueil</button>
             <span>/</span>
-            <span className="text-gray-400">Méthodologie</span>
+            <span className="text-gray-400">Comment ça marche</span>
           </div>
           <h1 className="text-2xl font-black text-white">Comment fonctionne ETBVault ?</h1>
           <p className="text-gray-400 text-sm mt-1.5">
-            Tous les signaux utilisés, leurs sources, et surtout — ce qu'on ne peut pas prévoir.
+            Ce qu'on affiche, d'où viennent les données, et ce qu'on ne peut pas savoir.
           </p>
         </div>
       </div>
@@ -169,18 +112,22 @@ export default function Methodology() {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-10">
 
         {/* Disclaimer principal */}
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-5">
-          <p className="text-red-400 font-bold text-base mb-2">⚠️ Ce n'est pas du conseil financier</p>
+        <div className="bg-gray-800/60 border border-gray-700/60 rounded-xl p-5">
+          <p className="text-pokemon-yellow font-bold text-base mb-2">ℹ️ ETBVault affiche des faits, pas des conseils</p>
           <p className="text-gray-300 text-sm leading-relaxed">
-            ETBVault agrège des données publiques et applique des formules pour produire des signaux. Ces signaux sont des <strong className="text-white">indicateurs d'aide à la décision</strong>, pas des prédictions fiables à 100%. Le marché du scellé Pokémon est influencé par des facteurs humains, communautaires et commerciaux que <strong className="text-white">aucun algorithme ne peut anticiper</strong>. N'investissez que ce que vous êtes prêt à perdre.
+            ETBVault est un <strong className="text-white">outil de suivi de prix</strong> et un{' '}
+            <strong className="text-white">coffre-fort personnel</strong>. Il vous montre le prix courant,
+            son évolution et la valeur de vos achats. Il ne vous dit jamais quoi acheter ni quand —
+            le marché du scellé Pokémon dépend de facteurs (réimpressions, hype, mode) qu'aucune donnée
+            ne permet de prévoir. L'interprétation reste la vôtre.
           </p>
         </div>
 
         {/* Signaux */}
         <section>
-          <h2 className="text-white font-bold text-lg mb-1">Les données qu'on utilise</h2>
+          <h2 className="text-white font-bold text-lg mb-1">Ce qu'on affiche</h2>
           <p className="text-gray-500 text-sm mb-5">
-            Pour chaque signal : ce qu'il mesure, d'où vient la donnée, et ses limites connues.
+            Pour chaque élément : ce qu'il montre, d'où vient la donnée, et ses limites connues.
           </p>
           <div className="space-y-4">
             {SIGNAUX.map((s) => (
@@ -213,7 +160,7 @@ export default function Methodology() {
         <section>
           <h2 className="text-white font-bold text-lg mb-1">Ce qu'on ne peut pas savoir</h2>
           <p className="text-gray-500 text-sm mb-5">
-            Ces facteurs sont réels et influencent les prix. Ils sont absents de nos données.
+            Ces facteurs influencent réellement les prix. Ils sont absents de nos données.
           </p>
           <div className="space-y-3">
             {ANGLES_MORTS.map((a) => (
@@ -230,51 +177,15 @@ export default function Methodology() {
           </div>
         </section>
 
-        {/* Comment lire les signaux */}
-        <section>
-          <h2 className="text-white font-bold text-lg mb-4">Comment bien lire les signaux</h2>
-          <div className="bg-gray-800/40 border border-gray-700/50 rounded-xl p-5 space-y-4">
-            <div className="flex gap-3">
-              <span className="text-pokemon-yellow font-black text-lg shrink-0">1</span>
-              <div>
-                <p className="text-white text-sm font-semibold">Aucun signal seul ne suffit</p>
-                <p className="text-gray-400 text-xs mt-1">Un bon score + une phase défavorable = signal contradictoire. Regardez toujours l'ensemble des indicateurs ensemble, pas un seul isolément.</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <span className="text-pokemon-yellow font-black text-lg shrink-0">2</span>
-              <div>
-                <p className="text-white text-sm font-semibold">Les données s'améliorent avec le temps</p>
-                <p className="text-gray-400 text-xs mt-1">Plus le vault accumule d'historique de prix, plus les signaux de tendance, CAGR et pression déscellage deviennent précis. Les premières semaines, certains signaux seront absents ou approximatifs.</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <span className="text-pokemon-yellow font-black text-lg shrink-0">3</span>
-              <div>
-                <p className="text-white text-sm font-semibold">Le risque réimpression prime sur tout</p>
-                <p className="text-gray-400 text-xs mt-1">Même un signal "Opportunité" avec un beau CAGR devient nul si Nintendo annonce une réimpression. Surveiller les annonces officielles reste indispensable — l'app ne le fait pas pour vous.</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <span className="text-pokemon-yellow font-black text-lg shrink-0">4</span>
-              <div>
-                <p className="text-white text-sm font-semibold">Prix CM ≠ prix de vente réel</p>
-                <p className="text-gray-400 text-xs mt-1">Le prix affiché sur CM est le prix demandé par les vendeurs. Le vrai prix de transaction peut être inférieur, surtout pour les ETBs premium où les acheteurs négocient. Anticipez un spread de 5–15%.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Sources */}
         <section>
           <h2 className="text-white font-bold text-lg mb-4">Sources de données</h2>
           <div className="bg-gray-800/40 border border-gray-700/50 rounded-xl overflow-hidden">
             {[
-              { source: 'Cardmarket', usage: 'Prix de tendance et prix bas des ETBs scellées', freq: 'Quotidien (02h00)', fiabilite: 'Élevée' },
+              { source: 'Cardmarket', usage: 'Prix de tendance et prix bas des ETB scellées', freq: 'Quotidien (07h00)', fiabilite: 'Élevée' },
               { source: 'TCGdex', usage: 'Prix des cartes individuelles du set', freq: 'Quotidien (07h30)', fiabilite: 'Élevée' },
-              { source: 'Pokémon TCG IO', usage: 'Catalogue sets, images, contenu des ETBs', freq: 'Au chargement', fiabilite: 'Élevée' },
-              { source: 'Base de données interne', usage: 'Prix de sortie, ères, IDs des ETBs', freq: 'Manuel (admin)', fiabilite: 'Vérifiée manuellement' },
-              { source: 'Google Trends / Communautés', usage: 'Signal intérêt communautaire', freq: '—', fiabilite: 'Non disponible en V1 (valeur fixe 50/100)' },
+              { source: 'TCGdex', usage: 'Catalogue sets, images, contenu des ETB', freq: 'Au chargement', fiabilite: 'Élevée' },
+              { source: 'Base interne', usage: 'Prix de sortie, ères, IDs des ETB', freq: 'Manuel (admin)', fiabilite: 'Vérifiée manuellement' },
             ].map((row, i) => (
               <div key={i} className={`px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs ${i % 2 === 0 ? '' : 'bg-gray-800/30'}`}>
                 <span className="text-pokemon-yellow font-bold w-36 shrink-0">{row.source}</span>
@@ -289,7 +200,7 @@ export default function Methodology() {
         {/* Footer */}
         <div className="border-t border-gray-800 pt-6 pb-4 text-center">
           <p className="text-gray-600 text-xs">
-            ETBVault est un outil d'aide à l'analyse, pas un oracle. Les décisions d'investissement restent entièrement de votre responsabilité.
+            ETBVault suit les prix et garde la trace de vos achats. Les décisions restent les vôtres.
           </p>
           <button
             onClick={() => navigate('/')}

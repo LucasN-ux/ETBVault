@@ -5,7 +5,6 @@ import ETBDetail from './pages/ETBDetail'
 import Home from './pages/Home'
 import Catalogue from './pages/Catalogue'
 import Vault from './pages/Vault'
-import Methodology from './pages/Methodology'
 
 function ETBLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -52,7 +51,6 @@ export default function App() {
         <Route path="/etb/:id" element={<ETBLayout />} />
         <Route path="/vault" element={<Vault />} />
         <Route path="/portfolio" element={<Vault />} />
-        <Route path="/methode" element={<Methodology />} />
       </Routes>
     </BrowserRouter>
   )

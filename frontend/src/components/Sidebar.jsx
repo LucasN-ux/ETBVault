@@ -78,12 +78,6 @@ export default function Sidebar({ isOpen, onClose }) {
         >
           🔒 Vault
         </button>
-        <button
-          onClick={() => { navigate('/methode'); onClose?.() }}
-          className="w-full text-xs text-gray-500 hover:text-gray-300 hover:bg-gray-800 rounded-lg py-1.5 transition-colors"
-        >
-          📖 Comment ça marche ?
-        </button>
       </div>
 
       {/* Recherche */}
