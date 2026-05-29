@@ -60,42 +60,9 @@ export async function mettreAJourPrixCartes(): Promise<void> {
     }
 
     console.log(`[cron] Prix cartes mis à jour : ${total} cartes`)
-
-    // Snapshot quotidien : valeur top 10 cartes par ETB → stocké dans prix_historique
-    // Permet de suivre l'évolution du ratio cartes/boîte dans le temps (signal spéculatif)
-    await snapshotValeurTop10Cartes()
   } catch (err) {
     console.error('[cron] Erreur mise à jour prix cartes :', err instanceof Error ? err.message : err)
   }
-}
-
-async function snapshotValeurTop10Cartes(): Promise<void> {
-  const aujourd = new Date()
-  aujourd.setHours(0, 0, 0, 0)
-
-  const etbs = await prisma.etb.findMany({
-    where: { cartes: { some: {} } },
-    select: { id: true },
-  })
-
-  let nb = 0
-  for (const etb of etbs) {
-    const top10 = await prisma.carte.findMany({
-      where: { etbId: etb.id, prixMarche: { gt: 0 } },
-      orderBy: { prixMarche: 'desc' },
-      take: 10,
-    })
-    const valeur = top10.reduce((s, c) => s + Number(c.prixMarche ?? 0), 0)
-    if (valeur <= 0) continue
-
-    await prisma.prixHistorique.upsert({
-      where: { etbId_date: { etbId: etb.id, date: aujourd } },
-      update: { valeurTop10Cartes: valeur },
-      create: { etbId: etb.id, date: aujourd, valeurTop10Cartes: valeur },
-    })
-    nb++
-  }
-  console.log(`[cron] Snapshot valeur top 10 cartes : ${nb} ETBs`)
 }
 
 // 07:30 chaque matin — après la mise à jour des prix ETB

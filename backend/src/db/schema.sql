@@ -16,7 +16,6 @@ CREATE TABLE IF NOT EXISTS prix_historique (
   cm_prix_bas     DECIMAL(10,2),
   cm_nb_annonces  INT,
   ebay_prix_moyen DECIMAL(10,2),
-  score           INT,
-  score_detail    JSONB,
+  origine         TEXT NOT NULL DEFAULT 'collecte',  -- 'collecte' | 'import_cm'
   UNIQUE(etb_id, date)
 );

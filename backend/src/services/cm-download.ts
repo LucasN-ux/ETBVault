@@ -4,78 +4,7 @@
 
 import { chromium } from 'playwright'
 import prisma from '../db/client'
-
-// Mapping ETB ID → idProduct(s) Cardmarket
-// Pour les sets avec plusieurs variantes, on calcule la moyenne des trend prices
-// Établi depuis le fichier products_nonsingles_6.json (2026-05-27)
-const ETB_PRODUCT_IDS: Record<string, number[]> = {
-  'bw8':      [286951],
-  'bw10':     [286950],
-  'xy1':      [286955, 286956],
-  'xy3':      [286948],
-  'xy4':      [286949],
-  'xy5':      [286953, 286954],
-  'xy6':      [286952],
-  'xy7':      [286947],
-  'xy8':      [286942, 286946],
-  'xy9':      [287836],
-  'xy10':     [289044],
-  'xy11':     [290089],
-  'xy12':     [293331, 293929],
-  'sm1':      [294123, 295477],
-  'sm2':      [296849],
-  'sm3':      [298775],
-  'sm3.5':    [301162],
-  'sm4':      [301168],
-  'sm5':      [315119, 315120],
-  'sm6':      [316134],
-  'sm7':      [357062],
-  'sm7.5':    [361540],
-  'sm8':      [363266],
-  'sm9':      [366885],
-  'sm10':     [370619],
-  'sm11':     [377493],
-  'sm115':    [381198],
-  'sm12':     [398434],
-  'swsh1':    [427136, 427141],
-  'swsh2':    [453283],
-  'swsh3':    [462229],
-  'swsh3.5':  [488304],
-  'swsh4':    [494499],
-  'swsh4.5':  [526120],
-  'swsh5':    [527425, 527685],
-  'swsh6':    [557971, 557972],
-  'swsh7':    [568794, 568795],
-  'cel25':    [570895],
-  'swsh8':    [574593],
-  'swsh9':    [583510],
-  'swsh10':   [611359],
-  'pgo':      [653700],
-  'swsh11':   [666150],
-  'swsh12':   [672338],
-  'swsh12.5': [683009],
-  'sv01':     [692101, 692102],
-  'sv02':     [703175],
-  'sv03':     [715464],
-  'sv03.5':   [719691],
-  'sv04':     [728727, 728730],
-  'sv04.5':   [745548],
-  'sv05':     [750410, 750412],
-  'sv06':     [761229],
-  'sv06.5':   [770958],
-  'sv07':     [776336],
-  'sv08':     [784963],
-  'sv08.5':   [798930],
-  'sv09':     [805593],
-  'sv10':     [818585],
-  'sv10.5b':  [824088],
-  'sv10.5w':  [824089],
-  'me01':     [834830, 834831],
-  'me02':     [846744],
-  'me02.5':   [860574],
-  'me03':     [865406],
-  'me04':     [877294],
-}
+import { ETB_PRODUCT_IDS } from './cm-products'
 
 interface CmPrixEntry {
   idProduct: number
@@ -180,7 +109,7 @@ function calculerPrixPourETB(
   }
 }
 
-export async function mettreAJourPrixDepuisCM(): Promise<{ ok: number; sans_prix: number }> {
+export async function mettreAJourPrixDepuisCM(): Promise<{ ok: number; sans_prix: number; inchanges: number }> {
   const prixIndex = await telechargerPrixGuide()
 
   const aujourd = new Date()
@@ -189,6 +118,7 @@ export async function mettreAJourPrixDepuisCM(): Promise<{ ok: number; sans_prix
   const etbIds = Object.keys(ETB_PRODUCT_IDS)
   let ok = 0
   let sans_prix = 0
+  let inchanges = 0
 
   for (const etbId of etbIds) {
     const { cmPrixMoyen, cmPrixBas } = calculerPrixPourETB(prixIndex, etbId)
@@ -199,15 +129,44 @@ export async function mettreAJourPrixDepuisCM(): Promise<{ ok: number; sans_prix
       continue
     }
 
+    // Dernier prix connu en base (toutes dates confondues)
+    const dernierEnDB = await prisma.prixHistorique.findFirst({
+      where: { etbId, cmPrixMoyen: { not: null } },
+      orderBy: { date: 'desc' },
+      select: { date: true, cmPrixMoyen: true },
+    })
+
+    const dernierPrix = dernierEnDB ? Number(dernierEnDB.cmPrixMoyen) : null
+    const prixChange = dernierPrix === null || Math.abs(cmPrixMoyen - dernierPrix) >= 0.01
+
+    if (!prixChange) {
+      inchanges++
+      continue
+    }
+
+    // Si le prix vient d'une entrée antérieure à aujourd'hui, on insère d'abord
+    // un point "palier" à la veille pour que le graphique soit en escalier
+    if (dernierEnDB && dernierEnDB.date < aujourd) {
+      const veille = new Date(aujourd)
+      veille.setDate(veille.getDate() - 1)
+      await prisma.prixHistorique.upsert({
+        where: { etbId_date: { etbId, date: veille } },
+        update: { cmPrixMoyen: dernierPrix, cmPrixBas: null },
+        create: { etbId, date: veille, cmPrixMoyen: dernierPrix ?? cmPrixMoyen, cmPrixBas: null },
+      })
+    }
+
+    // Nouveau prix du jour
     await prisma.prixHistorique.upsert({
       where: { etbId_date: { etbId, date: aujourd } },
       update: { cmPrixMoyen, cmPrixBas },
       create: { etbId, date: aujourd, cmPrixMoyen, cmPrixBas },
     })
 
-    console.log(`[cm-download] ✓ ${etbId}: ${cmPrixMoyen}€ (bas: ${cmPrixBas ?? '?'}€)`)
+    console.log(`[cm-download] ✓ ${etbId}: ${dernierPrix ?? '—'}€ → ${cmPrixMoyen}€`)
     ok++
   }
 
-  return { ok, sans_prix }
+  console.log(`[cm-download] ${ok} mis à jour, ${inchanges} inchangés, ${sans_prix} sans prix.`)
+  return { ok, sans_prix, inchanges }
 }
