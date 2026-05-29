@@ -122,20 +122,6 @@ export function detecterMouvement(historique) {
   }
 }
 
-// Seuil de mouvement pour le GRAPHE, adapté à la volatilité propre de l'ETB.
-// Une ETB stable (σ ~0) → seuil = plancher (montre le moindre vrai frémissement).
-// Une ETB volatile (σ élevé) → seuil plus haut (filtre davantage de bruit).
-// Cohérent avec la détection de mouvement : le graphe parle la même « langue » que l'indicateur.
-const SEUIL_PLANCHER = 0.005 // 0,5 % minimum
-const SEUIL_PLAFOND = 0.05   // 5 % maximum
-const SEUIL_K = 2.5          // multiple de σ (volatilité journalière)
-const SEUIL_DEFAUT = 0.01    // cold start (pas assez d'historique pour σ)
-
-export function seuilAffichage(volatilite) {
-  if (volatilite == null || !Number.isFinite(volatilite) || volatilite <= 0) return SEUIL_DEFAUT
-  return Math.min(SEUIL_PLAFOND, Math.max(SEUIL_PLANCHER, SEUIL_K * volatilite))
-}
-
 // ── Helpers d'affichage ───────────────────────────────────────────────────────
 
 export const NIVEAU_LABEL = {

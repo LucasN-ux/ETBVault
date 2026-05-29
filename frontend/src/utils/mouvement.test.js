@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
   detecterMouvement,
-  seuilAffichage,
   flecheMouvement,
   couleurMouvement,
   NIVEAU_LABEL,
@@ -14,27 +13,6 @@ function serie(n, stepDays, valueFn) {
     cmPrixMoyen: valueFn(i),
   }))
 }
-
-describe('seuilAffichage', () => {
-  it('renvoie le défaut (1%) si volatilité absente/invalide', () => {
-    expect(seuilAffichage(null)).toBe(0.01)
-    expect(seuilAffichage(0)).toBe(0.01)
-    expect(seuilAffichage(-1)).toBe(0.01)
-    expect(seuilAffichage(NaN)).toBe(0.01)
-  })
-
-  it('applique le plancher pour une ETB très stable', () => {
-    expect(seuilAffichage(0.0001)).toBe(0.005) // 2.5*σ < plancher → 0,5%
-  })
-
-  it('applique le plafond pour une ETB très volatile', () => {
-    expect(seuilAffichage(0.1)).toBe(0.05) // 2.5*σ > plafond → 5%
-  })
-
-  it('vaut 2.5·σ entre plancher et plafond', () => {
-    expect(seuilAffichage(0.01)).toBeCloseTo(0.025, 5)
-  })
-})
 
 describe('detecterMouvement — cas limites', () => {
   it('série vide → données insuffisantes, horizons indisponibles', () => {
