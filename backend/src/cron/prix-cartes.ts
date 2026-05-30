@@ -21,7 +21,7 @@ export async function mettreAJourPrixCartes(): Promise<void> {
   console.log('[cron] Début mise à jour prix cartes —', new Date().toISOString())
 
   try {
-    const etbs = await prisma.etb.findMany({
+    const etbs = await prisma.produit.findMany({
       where: { cartes: { some: {} } },
       select: { id: true, setId: true },
     })

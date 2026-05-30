@@ -131,7 +131,7 @@ export async function mettreAJourPrixDepuisCM(): Promise<{ ok: number; sans_prix
 
     // Dernier prix connu en base (toutes dates confondues)
     const dernierEnDB = await prisma.prixHistorique.findFirst({
-      where: { etbId, cmPrixMoyen: { not: null } },
+      where: { produitId: etbId, cmPrixMoyen: { not: null } },
       orderBy: { date: 'desc' },
       select: { date: true, cmPrixMoyen: true },
     })
@@ -150,17 +150,17 @@ export async function mettreAJourPrixDepuisCM(): Promise<{ ok: number; sans_prix
       const veille = new Date(aujourd)
       veille.setDate(veille.getDate() - 1)
       await prisma.prixHistorique.upsert({
-        where: { etbId_date: { etbId, date: veille } },
+        where: { produitId_date: { produitId: etbId, date: veille } },
         update: { cmPrixMoyen: dernierPrix, cmPrixBas: null },
-        create: { etbId, date: veille, cmPrixMoyen: dernierPrix ?? cmPrixMoyen, cmPrixBas: null },
+        create: { produitId: etbId, date: veille, cmPrixMoyen: dernierPrix ?? cmPrixMoyen, cmPrixBas: null },
       })
     }
 
     // Nouveau prix du jour
     await prisma.prixHistorique.upsert({
-      where: { etbId_date: { etbId, date: aujourd } },
+      where: { produitId_date: { produitId: etbId, date: aujourd } },
       update: { cmPrixMoyen, cmPrixBas },
-      create: { etbId, date: aujourd, cmPrixMoyen, cmPrixBas },
+      create: { produitId: etbId, date: aujourd, cmPrixMoyen, cmPrixBas },
     })
 
     console.log(`[cm-download] ✓ ${etbId}: ${dernierPrix ?? '—'}€ → ${cmPrixMoyen}€`)

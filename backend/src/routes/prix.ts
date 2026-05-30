@@ -26,7 +26,7 @@ router.get('/', async (req: Request, res: Response) => {
   }
   try {
     const historique = await prisma.prixHistorique.findMany({
-      where: { etbId: id },
+      where: { produitId: id },
       orderBy: { date: 'asc' },
     })
     res.json(historique)
@@ -67,7 +67,7 @@ router.post('/', async (req: Request, res: Response) => {
   }
 
   try {
-    const etb = await prisma.etb.findUnique({ where: { id } })
+    const etb = await prisma.produit.findUnique({ where: { id } })
     if (!etb) {
       res.status(404).json({ error: 'ETB non trouvée' })
       return
@@ -82,9 +82,9 @@ router.post('/', async (req: Request, res: Response) => {
       ...(origine !== undefined && { origine: origine as string }),
     }
     const entry = await prisma.prixHistorique.upsert({
-      where: { etbId_date: { etbId: id, date: new Date(date) } },
+      where: { produitId_date: { produitId: id, date: new Date(date) } },
       update: champsOptionnels,
-      create: { etbId: id, date: new Date(date), ...champsOptionnels },
+      create: { produitId: id, date: new Date(date), ...champsOptionnels },
     })
     res.json(entry)
   } catch (e) {
@@ -101,7 +101,7 @@ router.get('/latest', async (req: Request, res: Response) => {
   }
   try {
     const dernier = await prisma.prixHistorique.findFirst({
-      where: { etbId: id, cmPrixMoyen: { not: null } },
+      where: { produitId: id, cmPrixMoyen: { not: null } },
       orderBy: { date: 'desc' },
     })
     if (!dernier) {
@@ -123,7 +123,7 @@ router.get('/mouvement', async (req: Request, res: Response) => {
     return
   }
   try {
-    const etb = await prisma.etb.findUnique({ where: { id } })
+    const etb = await prisma.produit.findUnique({ where: { id } })
     if (!etb) {
       res.status(404).json({ error: 'ETB non trouvée' })
       return
@@ -131,13 +131,13 @@ router.get('/mouvement', async (req: Request, res: Response) => {
 
     // Tout l'historique de prix (collecte + import), pour calculer la volatilité propre
     const historique = await prisma.prixHistorique.findMany({
-      where: { etbId: id, cmPrixMoyen: { not: null } },
+      where: { produitId: id, cmPrixMoyen: { not: null } },
       orderBy: { date: 'asc' },
       select: { date: true, cmPrixMoyen: true },
     })
 
     const resultat = detecterMouvement(historique)
-    res.json({ etbId: id, ...resultat })
+    res.json({ produitId: id, ...resultat })
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' })
   }

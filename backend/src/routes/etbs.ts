@@ -11,7 +11,7 @@ function etbIdValide(id: unknown): id is string {
 // GET /api/etbs
 router.get('/', async (_req: Request, res: Response) => {
   try {
-    const etbs = await prisma.etb.findMany({ orderBy: { dateSortie: 'desc' } })
+    const etbs = await prisma.produit.findMany({ orderBy: { dateSortie: 'desc' } })
     res.json(etbs)
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' })
@@ -26,7 +26,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     return
   }
   try {
-    const etb = await prisma.etb.findUnique({ where: { id } })
+    const etb = await prisma.produit.findUnique({ where: { id } })
     if (!etb) {
       res.status(404).json({ error: 'ETB non trouvée' })
       return
@@ -46,7 +46,7 @@ router.get('/:id/cartes', async (req: Request, res: Response) => {
   }
   try {
     const cartesEnCache = await prisma.carte.findMany({
-      where: { etbId: id },
+      where: { produitId: id },
       orderBy: { prixMarche: 'desc' },
     })
     if (cartesEnCache.length > 0) {
@@ -54,7 +54,7 @@ router.get('/:id/cartes', async (req: Request, res: Response) => {
       return
     }
 
-    const etb = await prisma.etb.findUnique({ where: { id } })
+    const etb = await prisma.produit.findUnique({ where: { id } })
     if (!etb) {
       res.status(404).json({ error: 'ETB non trouvée' })
       return
@@ -99,7 +99,7 @@ router.get('/:id/cartes', async (req: Request, res: Response) => {
     await prisma.carte.createMany({
       data: cartesDetaillees.map((carte) => ({
         id: carte.id,
-        etbId: id,
+        produitId: id,
         nom: carte.name,
         numero: carte.localId,
         imageUrl: carte.image ? `${carte.image}/high.webp` : null,
@@ -110,7 +110,7 @@ router.get('/:id/cartes', async (req: Request, res: Response) => {
     })
 
     const cartes = await prisma.carte.findMany({
-      where: { etbId: id },
+      where: { produitId: id },
       orderBy: { prixMarche: 'desc' },
     })
     res.json(cartes)

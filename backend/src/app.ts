@@ -32,6 +32,9 @@ app.get('/api/routes', (_req, res) => {
 app.use('/api/auth', authRouter)
 app.use('/api/vault', vaultRouter)
 app.use('/api/admin', adminRouter)
+// Catalogue produits scellés (ETB + autres types). /api/etbs conservé en alias rétro-compatible.
+app.use('/api/produits', etbsRouter)
+app.use('/api/produits/:id/prix', prixRouter)
 app.use('/api/etbs', etbsRouter)
 app.use('/api/etbs/:id/prix', prixRouter)
 
