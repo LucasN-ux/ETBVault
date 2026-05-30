@@ -56,7 +56,7 @@ function AccountNav() {
 
 function Nav() {
   const { pathname } = useLocation()
-  const isActive = (p) => pathname === p || (p === '/catalogue' && pathname.startsWith('/etb'))
+  const isActive = (p) => pathname === p || (p === '/catalogue' && (pathname.startsWith('/etb') || pathname.startsWith('/produit')))
 
   return (
     <header

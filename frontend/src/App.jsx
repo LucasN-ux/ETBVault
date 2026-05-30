@@ -17,7 +17,8 @@ export default function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<Home />} />
             <Route path="/catalogue" element={<Catalogue />} />
-            <Route path="/etb/:id" element={<ETBDetail />} />
+            <Route path="/produit/:id" element={<ETBDetail />} />
+            <Route path="/etb/:id" element={<ETBDetail />} />{/* alias rétro-compat */}
             <Route path="/connexion" element={<Connexion />} />
             <Route path="/vault" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
             <Route path="/portfolio" element={<ProtectedRoute><Vault /></ProtectedRoute>} />

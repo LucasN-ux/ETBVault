@@ -24,7 +24,7 @@ function HeroSlab({ etb, periode, go }) {
   const up = (etb.variationPct ?? 0) >= 0
   const spark = prixSeries(etb.series, 30)
   return (
-    <button onClick={() => go(`/etb/${etb.id}`)} className="slab group w-full text-left fadeUp" style={{ animationDelay: '0.1s' }}>
+    <button onClick={() => go(`/produit/${etb.id}`)} className="slab group w-full text-left fadeUp" style={{ animationDelay: '0.1s' }}>
       <div className="slab__glare" />
       <div className="flex items-stretch">
         <div className="slab__stage shrink-0" style={{ width: '46%', minHeight: 220, padding: 22 }}>
@@ -62,7 +62,7 @@ function TrendRow({ etb, rang, periode, go }) {
   const spark = prixSeries(etb.series, 14)
   return (
     <button
-      onClick={() => go(`/etb/${etb.id}`)}
+      onClick={() => go(`/produit/${etb.id}`)}
       className="group w-full text-left flex items-center gap-4 transition-colors"
       style={{ padding: '13px 16px', borderRadius: 'var(--radius-sm)' }}
       onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
