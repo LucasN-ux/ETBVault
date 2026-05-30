@@ -19,7 +19,8 @@
     "boxes": "python3 src/db/remove-bg-boxes.py && node src/db/update-box-images.js",
     "test": "jest --testEnvironment node",
     "enrich:eres": "tsx src/db/enrichir-eres.ts",
-    "audit": "tsx src/db/audit.ts"
+    "audit": "tsx src/db/audit.ts",
+    "match:tcgdex": "tsx src/db/match-tcgdex.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
