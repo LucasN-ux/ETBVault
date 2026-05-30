@@ -41,8 +41,12 @@ export default function SeriesSidebar({ isOpen, onClose, currentId, type = 'ETB'
   const [expanded, setExpanded] = useState({})
 
   // Liste les produits du même type que celui affiché, groupés par ère.
+  // Pour les ETB, on ne garde que les ETB curés (ids non « cm- ») — les variantes
+  // importées du catalogue CM (noms EN, sans image) pollueraient le navigateur.
   useEffect(() => {
-    fetchProduits(type).then(setEtbs).catch(() => {})
+    fetchProduits(type)
+      .then((list) => setEtbs(type === 'ETB' ? list.filter((e) => !String(e.id).startsWith('cm-')) : list))
+      .catch(() => {})
   }, [type])
 
   // Ère de l'ETB affichée : dépliée par défaut (tant que l'utilisateur n'a pas
