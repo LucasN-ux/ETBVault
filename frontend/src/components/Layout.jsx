@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Icon, Mark } from './Icon'
+import { useAuth } from '../context/AuthContext'
 
 // Shell unifié : barre de nav (sticky, blur) + contenu + footer.
 // Le ticker (bande marché) est rendu par la Home elle-même (elle a les données).
@@ -10,36 +10,47 @@ const LIENS = [
   { path: '/vault', label: 'Vault', icon: 'vault' },
 ]
 
-function RefreshButton() {
-  const [state, setState] = useState('idle') // idle | loading | ok | error
+// Zone compte : Connexion si déconnecté ; sinon lien Admin (si admin) + Déconnexion.
+function AccountNav() {
+  const { user, loading, logout } = useAuth()
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
 
-  async function handleRefresh() {
-    if (state === 'loading') return
-    setState('loading')
-    try {
-      const res = await fetch('/api/admin/refresh', { method: 'POST' })
-      if (!res.ok) throw new Error()
-      setState('ok')
-    } catch {
-      setState('error')
-    } finally {
-      setTimeout(() => setState('idle'), 4000)
-    }
+  if (loading) return null
+
+  if (!user) {
+    return (
+      <NavLink to="/connexion" className="btn btn-ghost" style={{ padding: '8px 14px', fontSize: 14 }}>
+        <Icon name="home" size={16} /> <span className="hidden sm:inline">Connexion</span>
+      </NavLink>
+    )
   }
 
-  const color =
-    state === 'ok' ? 'var(--up)' : state === 'error' ? 'var(--down)' : 'var(--muted)'
-
   return (
-    <button
-      onClick={handleRefresh}
-      disabled={state === 'loading'}
-      title="Mettre à jour les prix"
-      className="ml-1 transition-colors"
-      style={{ padding: 8, borderRadius: 'var(--radius-sm)', color, background: 'none', border: 0, cursor: state === 'loading' ? 'default' : 'pointer', display: 'flex' }}
-    >
-      <Icon name="refresh" size={17} className={state === 'loading' ? 'animate-spin' : ''} />
-    </button>
+    <div className="flex items-center" style={{ gap: 4 }}>
+      {user.role === 'ADMIN' && (
+        <NavLink
+          to="/admin"
+          className="flex items-center gap-2 transition-colors"
+          style={{
+            padding: '8px 14px', borderRadius: 'var(--radius-sm)', fontSize: 14, fontWeight: 540,
+            color: pathname === '/admin' ? 'var(--text)' : 'var(--muted)',
+            background: pathname === '/admin' ? 'var(--surface-2)' : 'transparent',
+          }}
+        >
+          <Icon name="shield" size={17} /> <span className="hidden sm:inline">Admin</span>
+        </NavLink>
+      )}
+      <span className="hidden md:inline truncate" style={{ fontSize: 12.5, color: 'var(--faint)', maxWidth: 150, marginLeft: 6 }}>{user.email}</span>
+      <button
+        onClick={() => { logout(); navigate('/') }}
+        title="Se déconnecter"
+        className="ml-1 transition-colors"
+        style={{ padding: 8, borderRadius: 'var(--radius-sm)', color: 'var(--muted)', background: 'none', border: 0, cursor: 'pointer', display: 'flex' }}
+      >
+        <Icon name="external" size={17} />
+      </button>
+    </div>
   )
 }
 
@@ -85,7 +96,8 @@ function Nav() {
               <span className="hidden sm:inline">{it.label}</span>
             </NavLink>
           ))}
-          <RefreshButton />
+          <span style={{ width: 1, height: 20, background: 'var(--border-2)', margin: '0 6px' }} />
+          <AccountNav />
         </nav>
       </div>
     </header>
