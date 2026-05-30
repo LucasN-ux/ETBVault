@@ -107,7 +107,10 @@ export default function Catalogue() {
       const s = q.toLowerCase()
       list = list.filter((e) => e.nom.toLowerCase().includes(s) || e.id.includes(s))
     }
-    if (tri === 'date') list.sort((a, b) => new Date(b.dateSortie ?? b.date_sortie ?? 0) - new Date(a.dateSortie ?? a.date_sortie ?? 0))
+    if (tri === 'date') list.sort((a, b) => {
+      const d = new Date(b.dateSortie ?? b.date_sortie ?? 0) - new Date(a.dateSortie ?? a.date_sortie ?? 0)
+      return d !== 0 ? d : a.nom.localeCompare(b.nom, 'fr')
+    })
     else if (tri === 'prix') list.sort((a, b) => (b.prixActuel ?? 0) - (a.prixActuel ?? 0))
     else if (tri === 'var') list.sort((a, b) => (b.v30 ?? -999) - (a.v30 ?? -999))
     else list.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
@@ -166,22 +169,30 @@ export default function Catalogue() {
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center" style={{ padding: '80px 0', gap: 12 }}>
             <Icon name="search" size={30} />
-            <p style={{ color: 'var(--muted)' }}>Aucune ETB ne correspond.</p>
+            <p style={{ color: 'var(--muted)' }}>Aucun produit ne correspond.</p>
             <button className="ulink" onClick={() => { setQ(''); setEra('Toutes') }}>Réinitialiser</button>
           </div>
         ) : grouped ? (
           <div className="flex flex-col" style={{ gap: 44 }}>
-            {groups.map((g) => (
-              <div key={g.era}>
-                <div className="flex items-baseline gap-3 mb-4">
-                  <h2 className="display" style={{ fontSize: 19 }}>{g.era}</h2>
-                  <span className="font-mono" style={{ fontSize: 12, color: 'var(--faint)' }}>{g.list.length} ETB</span>
+            {groups.map((g) => {
+              const visibles = g.list.slice(0, 18)
+              return (
+                <div key={g.era}>
+                  <div className="flex items-baseline gap-3 mb-4">
+                    <h2 className="display" style={{ fontSize: 19 }}>{g.era}</h2>
+                    <span className="font-mono" style={{ fontSize: 12, color: 'var(--faint)' }}>{g.list.length}</span>
+                  </div>
+                  <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
+                    {visibles.map((e) => <CatCard key={e.id} etb={e} go={go} />)}
+                  </div>
+                  {g.list.length > visibles.length && (
+                    <button onClick={() => setEra(g.era)} className="ulink mt-4 inline-flex items-center gap-1.5" style={{ fontSize: 13.5 }}>
+                      Voir les {g.list.length} {TYPE_LABEL[type] ?? 'produits'} · {g.era} <Icon name="arrowRight" size={15} />
+                    </button>
+                  )}
                 </div>
-                <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
-                  {g.list.map((e) => <CatCard key={e.id} etb={e} go={go} />)}
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         ) : (
           <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>

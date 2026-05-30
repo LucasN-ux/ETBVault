@@ -2,7 +2,19 @@
 import { Icon } from './Icon'
 import { eur, eur0, pct, hueFromId } from '../utils/format'
 
-// ---- Visuel de box : image réelle, sinon placeholder « coffret générique » teinté ----
+// Libellé du type de produit pour le placeholder (quand aucune image n'est dispo).
+const TYPE_PLACEHOLDER = {
+  ETB: 'Coffret Dresseur d’Élite',
+  DISPLAY: 'Display',
+  BOOSTER: 'Booster',
+  COFFRET: 'Coffret',
+  PREMIUM: 'Premium Collection',
+  TIN: 'Pokébox / Tin',
+  BLISTER: 'Blister',
+  AUTRE: 'Produit scellé',
+}
+
+// ---- Visuel de box : image réelle, sinon placeholder typé teinté ----
 export function BoxArt({ etb, className = '', style }) {
   const img = etb?.boxImageUrl ?? etb?.box_image_url ?? etb?.imageUrl ?? etb?.image_url
   if (img) {
@@ -45,7 +57,7 @@ export function BoxArt({ etb, className = '', style }) {
           {etb?.nom}
         </div>
         <div className="font-mono" style={{ fontSize: 8.5, letterSpacing: '0.12em', color: 'oklch(1 0 0 / 0.75)', marginTop: 4, textTransform: 'uppercase' }}>
-          Coffret Dresseur d’Élite
+          {TYPE_PLACEHOLDER[etb?.type] ?? 'Produit scellé'}
         </div>
       </div>
     </div>
