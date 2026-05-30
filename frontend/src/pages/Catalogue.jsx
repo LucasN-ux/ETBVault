@@ -101,7 +101,8 @@ export default function Catalogue() {
 
   const filtered = useMemo(() => {
     let list = enrichies.slice()
-    if (era !== 'Toutes') list = list.filter((e) => e.era === era)
+    if (era === 'Autres') list = list.filter((e) => !ERES.includes(e.era))
+    else if (era !== 'Toutes') list = list.filter((e) => e.era === era)
     if (q.trim()) {
       const s = q.toLowerCase()
       list = list.filter((e) => e.nom.toLowerCase().includes(s) || e.id.includes(s))
@@ -113,10 +114,13 @@ export default function Catalogue() {
     return list
   }, [enrichies, era, q, tri])
 
-  const grouped = era === 'Toutes' && tri === 'date' && type === 'ETB'
+  const grouped = era === 'Toutes' && tri === 'date'
   const groups = useMemo(() => {
     if (!grouped) return null
-    return ERES.map((er) => ({ era: er, list: filtered.filter((e) => e.era === er) })).filter((g) => g.list.length)
+    const g = ERES.map((er) => ({ era: er, list: filtered.filter((e) => e.era === er) })).filter((x) => x.list.length)
+    const autres = filtered.filter((e) => !ERES.includes(e.era))
+    if (autres.length) g.push({ era: 'Autres', list: autres })
+    return g
   }, [filtered, grouped])
 
   return (
@@ -136,15 +140,12 @@ export default function Catalogue() {
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar" style={{ paddingBottom: 2 }}>
             {TYPES.map((t) => <Chip key={t.k} active={type === t.k} onClick={() => { setType(t.k); setEra('Toutes') }}>{t.l}</Chip>)}
           </div>
-          {/* Ères (ETB uniquement) + tri */}
+          {/* Ères + tri */}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar" style={{ paddingBottom: 2 }}>
-            {type === 'ETB' && (
-              <>
-                <Chip active={era === 'Toutes'} onClick={() => setEra('Toutes')}>Toutes</Chip>
-                {ERES.map((er) => <Chip key={er} active={era === er} onClick={() => setEra(er)}>{er}</Chip>)}
-                <span style={{ width: 1, height: 18, background: 'var(--border-2)', margin: '0 6px', flexShrink: 0 }} />
-              </>
-            )}
+            <Chip active={era === 'Toutes'} onClick={() => setEra('Toutes')}>Toutes</Chip>
+            {ERES.map((er) => <Chip key={er} active={era === er} onClick={() => setEra(er)}>{er}</Chip>)}
+            <Chip active={era === 'Autres'} onClick={() => setEra('Autres')}>Autres</Chip>
+            <span style={{ width: 1, height: 18, background: 'var(--border-2)', margin: '0 6px', flexShrink: 0 }} />
             <span className="flex items-center shrink-0" style={{ color: 'var(--faint)' }}>
               <Icon name="sort" size={14} />
             </span>

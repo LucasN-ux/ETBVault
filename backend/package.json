@@ -17,7 +17,9 @@
     "studio": "prisma studio",
     "refresh:etb": "tsx src/db/run-cm-refresh.ts",
     "boxes": "python3 src/db/remove-bg-boxes.py && node src/db/update-box-images.js",
-    "test": "jest --testEnvironment node"
+    "test": "jest --testEnvironment node",
+    "enrich:eres": "tsx src/db/enrichir-eres.ts",
+    "audit": "tsx src/db/audit.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

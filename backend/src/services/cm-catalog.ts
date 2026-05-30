@@ -2,6 +2,7 @@ import type { ProduitType } from '@prisma/client'
 import prisma from '../db/client'
 import { fetchCmJson } from './cm-session'
 import { ETB_PRODUCT_IDS } from './cm-products'
+import { infererEre } from './cm-eres'
 
 // Ingestion du catalogue produits scellés depuis l'export officiel CM
 // (products_nonsingles_6.json), filtré aux catégories retenues et mappé vers ProduitType.
@@ -41,13 +42,13 @@ export async function ingererCatalogueCM(): Promise<{ total: number; retenus: nu
   // idProduct déjà couverts par les ETB curés existants → on ne recrée pas.
   const dejaCouverts = new Set<number>(Object.values(ETB_PRODUCT_IDS).flat())
 
-  const records: Array<{ id: string; nom: string; type: ProduitType; cmIdProducts: number[] }> = []
+  const records: Array<{ id: string; nom: string; type: ProduitType; era: string | null; cmIdProducts: number[] }> = []
   let ignoresETB = 0
   for (const p of products) {
     const type = typePourProduit(p)
     if (!type) continue // catégorie non retenue
     if (dejaCouverts.has(p.idProduct)) { ignoresETB++; continue }
-    records.push({ id: `cm-${p.idProduct}`, nom: p.name, type, cmIdProducts: [p.idProduct] })
+    records.push({ id: `cm-${p.idProduct}`, nom: p.name, type, era: infererEre(p.name), cmIdProducts: [p.idProduct] })
   }
 
   let inseres = 0
