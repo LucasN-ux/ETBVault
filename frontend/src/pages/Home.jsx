@@ -1,371 +1,216 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts'
-import Navbar from '../components/Navbar'
-import { fetchETBs, fetchTendances, fetchPrixHistoriqueMultiple } from '../services/api'
-import { detecterMouvement, NIVEAU_LABEL, flecheMouvement } from '../utils/mouvement'
+import { fetchETBs, fetchTendances, fetchSparklines } from '../services/api'
+import { detecterMouvement } from '../utils/mouvement'
+import { eur0 } from '../utils/format'
+import { Icon } from '../components/Icon'
+import Sparkline from '../components/Sparkline'
+import { BoxArt, MovementBadge, Price, VarNum, Segmented, Ticker, KPI, EraTag } from '../components/ui'
 
 const PERIODES = [
-  { jours: 7,  label: '7 jours' },
-  { jours: 30, label: '30 jours' },
-  { jours: 90, label: '3 mois' },
+  { value: 7, label: '7 j' },
+  { value: 30, label: '30 j' },
+  { value: 90, label: '3 mois' },
 ]
 
-// Badge de mouvement ADAPTATIF : niveau (faible/moyen/fort) relatif à la
-// volatilité propre de l'ETB, jamais un seuil fixe. Constat, pas conseil.
-function badgeMouvement(h) {
-  if (!h || h.niveau === 'indisponible')
-    return { texte: 'Nouveau', badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30', dot: 'bg-blue-400' }
-  if (h.niveau === 'faible' || h.direction === 'stable')
-    return { texte: 'Stable', badge: 'bg-gray-700/60 text-gray-400 border-gray-600/30', dot: 'bg-gray-500' }
-  const hausse = h.direction === 'hausse'
-  return {
-    texte: `${flecheMouvement(h)} ${NIVEAU_LABEL[h.niveau]}`,
-    badge: hausse
-      ? 'bg-green-500/20 text-green-400 border-green-500/30'
-      : 'bg-red-500/20 text-red-400 border-red-500/30',
-    dot: hausse ? 'bg-green-400' : 'bg-red-400',
-  }
+function prixSeries(series, n) {
+  return (series ?? []).slice(-n).map((p) => Number(p.cmPrixMoyen))
 }
 
-function Sparkline({ data, positif }) {
-  if (!data || data.length === 0) return (
-    <div className="w-full h-full flex items-center justify-center">
-      <div className="w-full h-px bg-gray-700" />
-    </div>
-  )
-  const color = positif ? '#22c55e' : '#ef4444'
+function HeroSlab({ etb, periode, go }) {
+  const mv = useMemo(() => detecterMouvement(etb.series).courtTerme, [etb.series])
+  const up = (etb.variationPct ?? 0) >= 0
+  const spark = prixSeries(etb.series, 30)
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={data} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
-        <Tooltip
-          content={({ active, payload }) => {
-            if (!active || !payload?.length) return null
-            return (
-              <div className="bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white">
-                {Number(payload[0].value).toFixed(2)} €
-              </div>
-            )
-          }}
-        />
-        <Line
-          type="monotone"
-          dataKey="cmPrixMoyen"
-          stroke={color}
-          strokeWidth={1.5}
-          dot={false}
-          activeDot={{ r: 3, fill: color, strokeWidth: 0 }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
-  )
-}
-
-export default function Home() {
-  const navigate = useNavigate()
-  const [etbs, setEtbs] = useState([])
-  const [periode, setPeriode] = useState(7)
-  const [tendances, setTendances] = useState([])
-  const [historiques, setHistoriques] = useState({})
-  const [loading, setLoading] = useState(true)
-  const [loadingTendances, setLoadingTendances] = useState(false)
-
-  useEffect(() => {
-    fetchETBs().then(setEtbs).catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    setLoadingTendances(true)
-    fetchTendances(periode)
-      .then(setTendances)
-      .catch(() => {})
-      .finally(() => { setLoadingTendances(false); setLoading(false) })
-  }, [periode])
-
-  const top10 = useMemo(() => {
-    if (!etbs.length || !tendances.length) return []
-    const etbMap = Object.fromEntries(etbs.map((e) => [e.id, e]))
-    return tendances
-      .slice(0, 10)
-      .map((t, i) => {
-        const etb = etbMap[t.etbId]
-        if (!etb) return null
-        return {
-          ...etb,
-          rang: i + 1,
-          prixActuel: t.prixActuel,
-          prixPrecedent: t.prixPrecedent,
-          variationPct: t.variationPct,
-        }
-      })
-      .filter(Boolean)
-  }, [etbs, tendances])
-
-  useEffect(() => {
-    if (!top10.length) return
-    fetchPrixHistoriqueMultiple(top10.map((e) => e.id))
-      .then(setHistoriques)
-      .catch(() => {})
-  }, [top10.map((e) => e.id).join(',')])
-
-  return (
-    <div className="min-h-screen bg-gray-950 flex flex-col">
-      <Navbar />
-
-      {/* ── Hero ─────────────────────────────────────────────── */}
-      <section className="flex flex-col items-center justify-center text-center px-6 py-16 sm:py-24">
-        <div className="max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 bg-pokemon-yellow/10 border border-pokemon-yellow/20 text-pokemon-yellow text-xs font-semibold px-4 py-2 rounded-full mb-8">
-            <span className="w-2 h-2 bg-pokemon-yellow rounded-full animate-pulse" />
-            Marché Pokémon TCG · France uniquement
-          </div>
-          <h1 className="text-4xl sm:text-6xl font-black text-white leading-tight mb-5">
-            Suivez le prix des{' '}
-            <span className="text-pokemon-yellow">ETB Pokémon</span>
-          </h1>
-          <p className="text-gray-400 text-base sm:text-lg leading-relaxed mb-10 max-w-xl mx-auto">
-            Historique des prix de chaque Elite Trainer Box, et un coffre-fort pour suivre
-            vos achats et vos plus-values. Des faits, pas des conseils.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button
-              onClick={() => navigate('/catalogue')}
-              className="bg-pokemon-yellow text-gray-900 font-bold text-base px-8 py-3.5 rounded-xl hover:bg-yellow-400 transition-colors w-full sm:w-auto"
-            >
-              Explorer les 76 ETBs →
-            </button>
-            <button
-              onClick={() => navigate('/vault')}
-              className="bg-gray-800 text-white font-semibold text-base px-8 py-3.5 rounded-xl hover:bg-gray-700 transition-colors w-full sm:w-auto border border-gray-700"
-            >
-              Mon Vault
-            </button>
-          </div>
+    <button onClick={() => go(`/etb/${etb.id}`)} className="slab group w-full text-left fadeUp" style={{ animationDelay: '0.1s' }}>
+      <div className="slab__glare" />
+      <div className="flex items-stretch">
+        <div className="slab__stage shrink-0" style={{ width: '46%', minHeight: 220, padding: 22 }}>
+          <BoxArt etb={etb} className="w-full" style={{ maxHeight: 190, height: 190 }} />
         </div>
-      </section>
-
-      {/* ── Top 10 ───────────────────────────────────────────── */}
-      <section className="border-t border-gray-800 py-14 px-4 sm:px-6">
-        <div className="max-w-5xl mx-auto">
-
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
-            <div>
-              <h2 className="text-white font-bold text-2xl">Top 10 ETBs du moment</h2>
-              <p className="text-gray-500 text-sm mt-1">
-                Classées par hausse récente · Source : Cardmarket
-              </p>
-            </div>
-            <div className="flex items-center gap-3 self-start">
-              <div className="flex bg-gray-800 rounded-xl p-1 gap-0.5">
-                {PERIODES.map((p) => (
-                  <button
-                    key={p.jours}
-                    onClick={() => setPeriode(p.jours)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                      periode === p.jours
-                        ? 'bg-pokemon-yellow text-gray-900'
-                        : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => navigate('/catalogue')}
-                className="text-pokemon-yellow text-sm font-medium hover:underline whitespace-nowrap"
-              >
-                Tout voir →
-              </button>
-            </div>
-          </div>
-
-          {/* Podium — top 3 */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            {loading || loadingTendances || top10.length === 0
-              ? Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} featured />)
-              : top10.slice(0, 3).map((etb) => (
-                  <Top10Card
-                    key={etb.id}
-                    etb={etb}
-                    rang={etb.rang}
-                    historique={historiques[etb.id] ?? []}
-                    periode={periode}
-                    featured
-                    onClick={() => navigate(`/etb/${etb.id}`)}
-                  />
-                ))}
-          </div>
-
-          {/* Rangs 4-10 */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
-            {loading || loadingTendances || top10.length === 0
-              ? Array.from({ length: 7 }).map((_, i) => <SkeletonCard key={i} />)
-              : top10.slice(3).map((etb) => (
-                  <Top10Card
-                    key={etb.id}
-                    etb={etb}
-                    rang={etb.rang}
-                    historique={historiques[etb.id] ?? []}
-                    periode={periode}
-                    onClick={() => navigate(`/etb/${etb.id}`)}
-                  />
-                ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Stats ────────────────────────────────────────────── */}
-      <section className="border-t border-gray-800 py-12 px-6">
-        <div className="max-w-3xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
-          <Stat value="76" label="ETBs" />
-          <Stat value="6" label="Ères" />
-          <Stat value="2011" label="Depuis" />
-          <Stat value="100%" label="Gratuit" />
-        </div>
-      </section>
-
-      {/* ── Features ─────────────────────────────────────────── */}
-      <section className="border-t border-gray-800 bg-gray-900/40 py-16 px-6">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-white font-bold text-xl text-center mb-10">Tout ce dont vous avez besoin</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <FeatureCard icon="📈" title="Historique des prix" desc="Évolution du prix Cardmarket dans le temps. Identifiez les tendances et les moments clés." />
-            <FeatureCard icon="🃏" title="Valeur des cartes" desc="Prix Cardmarket de chaque carte du set. Identifiez les pulls les plus précieux." />
-            <FeatureCard icon="🔒" title="Vault personnel" desc="Suivez vos ETBs achetées et calculez votre plus-value ou moins-value en temps réel." />
-          </div>
-        </div>
-      </section>
-
-      <footer className="border-t border-gray-800 py-5 px-6 text-center mt-auto">
-        <p className="text-gray-700 text-xs">
-          ETBVault · Données : Cardmarket & TCGdex · Marché français uniquement
-        </p>
-      </footer>
-    </div>
-  )
-}
-
-function Top10Card({ etb, rang, historique, periode, featured = false, onClick }) {
-  // Mouvement adaptatif (court terme 30j) calculé sur l'historique réel de l'ETB
-  const mvt = useMemo(() => detecterMouvement(historique), [historique])
-  const cfg = badgeMouvement(mvt.courtTerme)
-  const image = etb.imageUrl ?? etb.image_url
-  const variation = etb.variationPct
-  const positif = variation === null || variation >= 0
-  const sparkData = historique.slice(-(periode <= 7 ? 7 : periode <= 30 ? 30 : 90))
-
-  const rangColors = {
-    1: 'text-yellow-400 border-yellow-400/60',
-    2: 'text-gray-300 border-gray-400/50',
-    3: 'text-amber-600 border-amber-600/50',
-  }
-  const rangCl = rangColors[rang] ?? 'text-gray-600 border-gray-700'
-
-  const cardBorder = featured
-    ? rang === 1 ? 'border-yellow-500/50 shadow-yellow-500/10 shadow-xl'
-    : rang === 2 ? 'border-gray-400/30 shadow-gray-400/5 shadow-lg'
-    : 'border-amber-600/30 shadow-amber-600/5 shadow-lg'
-    : 'border-gray-700/60'
-
-  const imageH = featured ? (rang === 1 ? 'h-52' : 'h-44') : 'h-36'
-  const imgInnerH = featured ? (rang === 1 ? 'h-40' : 'h-32') : 'h-24'
-  const sparkH = featured ? 'h-16' : 'h-11'
-  const badgeSize = featured ? 'w-8 h-8 text-sm' : 'w-6 h-6 text-[10px]'
-
-  return (
-    <button
-      onClick={onClick}
-      className={`group flex flex-col rounded-2xl border bg-gray-800/60 overflow-hidden text-left transition-all duration-200 hover:scale-[1.02] hover:shadow-2xl hover:border-gray-500 ${cardBorder}`}
-    >
-      {/* Bandeau podium pour le #1 */}
-      {featured && rang === 1 && (
-        <div className="bg-gradient-to-r from-yellow-500/20 via-yellow-400/10 to-transparent px-3 py-1 border-b border-yellow-500/20 flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
-          <span className="text-yellow-400 text-[9px] font-black tracking-widest uppercase">Meilleure hausse</span>
-        </div>
-      )}
-
-      {/* Image */}
-      <div className={`relative bg-gray-900 flex items-center justify-center ${imageH} w-full overflow-hidden`}>
-        {image ? (
-          <img src={image} alt={etb.nom} className={`${imgInnerH} object-contain p-3 group-hover:scale-105 transition-transform duration-300`} />
-        ) : (
-          <span className="text-gray-700 text-xs font-mono">{etb.id}</span>
-        )}
-        <div className={`absolute top-2.5 left-2.5 ${badgeSize} rounded-full border bg-gray-900/90 flex items-center justify-center font-black ${rangCl}`}>
-          {rang}
-        </div>
-        <div className={`absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border backdrop-blur-sm ${cfg.badge}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-          {cfg.texte}
-        </div>
-      </div>
-
-      {/* Sparkline */}
-      <div className={`${sparkH} bg-gray-900/60 border-t border-gray-700/40 px-1`}>
-        <Sparkline data={sparkData} positif={positif} />
-      </div>
-
-      {/* Infos */}
-      <div className={`${featured ? 'p-3.5' : 'p-2.5'} flex flex-col gap-1.5`}>
-        <div>
-          <p className={`text-white ${featured ? 'text-xs' : 'text-[10px]'} font-bold leading-snug line-clamp-2 group-hover:text-pokemon-yellow transition-colors`}>{etb.nom}</p>
-          <p className="text-gray-600 text-[10px] mt-0.5">{etb.era}</p>
-        </div>
-
-        <div className="flex items-end justify-between mt-auto">
+        <div className="flex-1 flex flex-col justify-between" style={{ padding: '22px 22px 20px', borderLeft: '1px solid var(--border)' }}>
           <div>
-            <p className={`text-pokemon-yellow font-black ${featured ? 'text-base' : 'text-sm'} leading-none`}>
-              {etb.prixActuel.toFixed(2).replace('.', ',')} €
-            </p>
-            {etb.prixPrecedent && (
-              <p className="text-gray-600 text-[10px] mt-0.5">
-                -{periode}j : {etb.prixPrecedent.toFixed(2).replace('.', ',')} €
-              </p>
-            )}
+            <div className="flex items-center justify-between mb-3">
+              <span className="mv mv-flat" style={{ padding: '4px 10px', fontSize: 10.5, letterSpacing: '0.06em' }}>
+                <Icon name="trend" size={12} stroke={2} /> PLUS FORTE HAUSSE · {periode === 7 ? '7 J' : periode === 30 ? '30 J' : '3 MOIS'}
+              </span>
+              <EraTag>{etb.era}</EraTag>
+            </div>
+            <h3 className="display" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)', marginBottom: 4 }}>{etb.nom}</h3>
+            <div style={{ color: 'var(--muted)', fontSize: 13 }}>Coffret Dresseur d’Élite · {etb.annee}</div>
           </div>
-          <span className={`font-black ${featured ? 'text-sm' : 'text-xs'} ${variation === null ? 'text-blue-400' : positif ? 'text-green-400' : 'text-red-400'}`}>
-            {variation === null ? 'Nouveau' : `${positif ? '+' : ''}${variation}%`}
-          </span>
+          <div style={{ height: 54, margin: '14px 0' }}>
+            {spark.length >= 2 ? <Sparkline data={spark} up={up} h={54} w={300} strokeW={2} /> : <div style={{ height: 54 }} />}
+          </div>
+          <div className="flex items-end justify-between">
+            <div>
+              <Price value={etb.prixActuel} size={28} />
+              <div style={{ fontSize: 11.5, color: 'var(--faint)', marginTop: 3 }}>prix marché Cardmarket</div>
+            </div>
+            <MovementBadge mv={mv} showPct size="md" isNew={etb.variationPct == null} />
+          </div>
         </div>
       </div>
     </button>
   )
 }
 
-function SkeletonCard({ featured = false }) {
+function TrendRow({ etb, rang, periode, go }) {
+  const up = (etb.variationPct ?? 0) >= 0
+  const spark = prixSeries(etb.series, 14)
   return (
-    <div className="rounded-2xl border border-gray-700 bg-gray-800/60 overflow-hidden animate-pulse">
-      <div className={`${featured ? 'h-48' : 'h-36'} bg-gray-700`} />
-      <div className={`${featured ? 'h-16' : 'h-11'} bg-gray-750 border-t border-gray-700`} />
-      <div className="p-3 space-y-2">
-        <div className="h-3 bg-gray-700 rounded w-4/5" />
-        <div className="h-2 bg-gray-700 rounded w-1/2" />
-        <div className="flex justify-between mt-1">
-          <div className="h-4 bg-gray-700 rounded w-1/3" />
-          <div className="h-4 bg-gray-700 rounded w-1/4" />
-        </div>
+    <button
+      onClick={() => go(`/etb/${etb.id}`)}
+      className="group w-full text-left flex items-center gap-4 transition-colors"
+      style={{ padding: '13px 16px', borderRadius: 'var(--radius-sm)' }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
+      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+    >
+      <span className="font-mono tnum" style={{ width: 22, fontSize: 13, color: 'var(--faint)' }}>{String(rang).padStart(2, '0')}</span>
+      <div className="shrink-0 surface-2 flex items-center justify-center overflow-hidden" style={{ width: 52, height: 40, borderRadius: 8 }}>
+        <BoxArt etb={etb} style={{ height: 34, width: 46 }} />
       </div>
-    </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate" style={{ fontSize: 14, fontWeight: 560 }}>{etb.nom}</div>
+        <EraTag>{etb.era}</EraTag>
+      </div>
+      <div className="hidden sm:block shrink-0" style={{ width: 90, height: 30 }}>
+        {spark.length >= 2 ? <Sparkline data={spark} up={up} h={30} w={90} fill={false} strokeW={1.6} /> : <div style={{ height: 30 }} />}
+      </div>
+      <div className="text-right shrink-0" style={{ width: 92 }}>
+        <Price value={etb.prixActuel} size={14.5} accent={false} />
+      </div>
+      <div className="text-right shrink-0" style={{ width: 72 }}>
+        <VarNum v={etb.variationPct} size={13.5} />
+      </div>
+    </button>
   )
 }
 
-function FeatureCard({ icon, title, desc }) {
-  return (
-    <div className="bg-gray-800/60 rounded-2xl p-5 border border-gray-700/60">
-      <div className="text-2xl mb-3">{icon}</div>
-      <h3 className="text-white font-semibold text-sm mb-1.5">{title}</h3>
-      <p className="text-gray-400 text-xs leading-relaxed">{desc}</p>
-    </div>
-  )
-}
+export default function Home() {
+  const navigate = useNavigate()
+  const go = (p) => navigate(p)
+  const [etbs, setEtbs] = useState([])
+  const [periode, setPeriode] = useState(7)
+  const [tendances, setTendances] = useState([])
+  const [sparks, setSparks] = useState({})
 
-function Stat({ value, label }) {
+  useEffect(() => {
+    fetchETBs().then(setEtbs).catch(() => {})
+    fetchSparklines(90).then(setSparks).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    fetchTendances(periode).then(setTendances).catch(() => {})
+  }, [periode])
+
+  const etbMap = useMemo(() => Object.fromEntries(etbs.map((e) => [e.id, e])), [etbs])
+
+  const ranked = useMemo(() => {
+    return tendances
+      .map((t) => {
+        const etb = etbMap[t.etbId]
+        if (!etb) return null
+        const annee = (etb.dateSortie ?? etb.date_sortie) ? new Date(etb.dateSortie ?? etb.date_sortie).getFullYear() : ''
+        return { ...etb, annee, prixActuel: t.prixActuel, variationPct: t.variationPct, series: sparks[t.etbId] ?? [] }
+      })
+      .filter(Boolean)
+  }, [tendances, etbMap, sparks])
+
+  const mover = ranked[0]
+  const list = ranked.slice(1, 9)
+  const totalVal = useMemo(() => ranked.reduce((s, e) => s + (e.prixActuel || 0), 0), [ranked])
+
+  // Bande ticker : top tendances 7j
+  const tickerItems = useMemo(
+    () => ranked.slice(0, 14).map((e) => ({ id: e.id, nom: e.nom, prixActuel: e.prixActuel, v7: e.variationPct })),
+    [ranked]
+  )
+
   return (
-    <div>
-      <p className="text-pokemon-yellow font-black text-4xl">{value}</p>
-      <p className="text-gray-500 text-sm mt-1">{label}</p>
-    </div>
+    <>
+      {tickerItems.length > 0 && (
+        <div style={{ borderBottom: '1px solid var(--border)', padding: '9px 0', position: 'relative', zIndex: 1, background: 'var(--bg-2)' }}>
+          <Ticker items={tickerItems} />
+        </div>
+      )}
+
+      <div className="hero-glow" style={{ position: 'relative', zIndex: 1 }}>
+        {/* ── HERO ── */}
+        <section className="mx-auto" style={{ maxWidth: 1180, padding: 'clamp(28px,5vw,64px) clamp(18px,4vw,40px) 8px' }}>
+          <div className="lg:grid lg:gap-12 lg:items-center" style={{ gridTemplateColumns: '1fr 1fr' }}>
+            <div className="fadeUp">
+              <div className="inline-flex items-center gap-2 mb-6" style={{ padding: '6px 13px', borderRadius: 999, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                <span className="dot" style={{ background: 'var(--accent)' }} />
+                <span style={{ fontSize: 12, color: 'var(--text-2)', fontWeight: 540 }}>Marché Pokémon TCG · France</span>
+              </div>
+              <h1 className="display" style={{ fontSize: 'clamp(34px, 5.6vw, 60px)', lineHeight: 0.98, marginBottom: 20 }}>
+                Le coffre-fort des<br />
+                <span style={{ color: 'var(--accent)' }}>ETB Pokémon.</span>
+              </h1>
+              <p style={{ fontSize: 'clamp(15px,1.5vw,18px)', color: 'var(--text-2)', lineHeight: 1.55, maxWidth: 460, marginBottom: 28 }}>
+                L’historique de prix de chaque Elite Trainer Box et un coffre pour suivre vos plus-values.
+                <span style={{ color: 'var(--text)', fontWeight: 560 }}> Des faits, pas des conseils.</span>
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button className="btn btn-accent" style={{ padding: '13px 22px', fontSize: 15 }} onClick={() => go('/catalogue')}>
+                  Explorer les {etbs.length || ''} ETB <Icon name="arrowRight" size={17} />
+                </button>
+                <button className="btn btn-ghost" style={{ padding: '13px 22px', fontSize: 15 }} onClick={() => go('/vault')}>
+                  <Icon name="vault" size={17} /> Mon Vault
+                </button>
+              </div>
+            </div>
+            <div className="mt-10 lg:mt-0">
+              {mover && <HeroSlab etb={mover} periode={periode} go={go} />}
+            </div>
+          </div>
+        </section>
+
+        {/* ── TENDANCES ── */}
+        <section className="mx-auto" style={{ maxWidth: 1180, padding: 'clamp(28px,4vw,52px) clamp(18px,4vw,40px)' }}>
+          <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
+            <div>
+              <h2 className="display" style={{ fontSize: 'clamp(22px,2.4vw,28px)', marginBottom: 4 }}>Tendances du marché</h2>
+              <p style={{ fontSize: 13.5, color: 'var(--muted)' }}>Classées par évolution récente · source Cardmarket</p>
+            </div>
+            <Segmented value={periode} onChange={setPeriode} size="md" options={PERIODES} />
+          </div>
+
+          <div className="card" style={{ padding: 8 }}>
+            <div className="hidden sm:flex items-center gap-4" style={{ padding: '8px 16px', color: 'var(--faint)', fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              <span style={{ width: 22 }}>#</span>
+              <span style={{ width: 52 }} />
+              <span className="flex-1">Coffret</span>
+              <span style={{ width: 90 }}>14 j</span>
+              <span className="text-right" style={{ width: 92 }}>Prix</span>
+              <span className="text-right" style={{ width: 72 }}>{periode === 7 ? '7 j' : periode === 30 ? '30 j' : '3 mois'}</span>
+            </div>
+            <div className="hr" style={{ margin: '4px 0' }} />
+            <div className="flex flex-col">
+              {ranked.length === 0
+                ? <p style={{ padding: '28px 16px', color: 'var(--muted)', fontSize: 14 }}>Chargement des tendances…</p>
+                : [mover, ...list].filter(Boolean).map((e, i) => <TrendRow key={e.id} etb={e} rang={i + 1} periode={periode} go={go} />)}
+            </div>
+          </div>
+          <button onClick={() => go('/catalogue')} className="ulink mt-5 inline-flex items-center gap-1.5" style={{ fontSize: 14 }}>
+            Voir tout le catalogue <Icon name="arrowRight" size={15} />
+          </button>
+        </section>
+
+        {/* ── KPI ── */}
+        <section className="mx-auto" style={{ maxWidth: 1180, padding: '8px clamp(18px,4vw,40px) clamp(36px,5vw,64px)' }}>
+          <div className="card grid grid-cols-2 md:grid-cols-4" style={{ padding: 'clamp(20px,3vw,30px)', gap: 'clamp(20px,3vw,30px)' }}>
+            <KPI label="ETB suivies" value={etbs.length || '—'} />
+            <KPI label="Ères couvertes" value="6" />
+            <KPI label="Valeur marché cumulée" value={totalVal > 0 ? eur0(totalVal) : '—'} />
+            <KPI label="Depuis" value="2011" />
+          </div>
+          <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--faint)', marginTop: 24 }}>
+            etbVault constate l’évolution des prix — il ne donne jamais de conseil d’achat ou de vente.
+          </p>
+        </section>
+      </div>
+    </>
   )
 }

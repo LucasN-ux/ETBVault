@@ -63,3 +63,11 @@ export async function fetchTendances(jours = 7) {
   if (!res.ok) throw new Error('Tendances non disponibles')
   return res.json()
 }
+
+// Récupère un mini-historique de prix pour TOUTES les ETBs en un appel
+// (pour les sparklines du catalogue / home). Retourne { etbId: [{ date, cmPrixMoyen }] }
+export async function fetchSparklines(jours = 30) {
+  const res = await fetch(`${BASE_URL}/sparklines?jours=${jours}`)
+  if (!res.ok) throw new Error('Sparklines non disponibles')
+  return res.json()
+}
