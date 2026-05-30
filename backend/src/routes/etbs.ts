@@ -1,18 +1,23 @@
 import { Router, type Request, type Response } from 'express'
+import type { ProduitType } from '@prisma/client'
 import prisma from '../db/client'
 
 const router = Router()
+
+const TYPES_PRODUIT = ['ETB', 'DISPLAY', 'BOOSTER', 'COFFRET', 'PREMIUM', 'TIN', 'BLISTER', 'AUTRE']
 
 // Validation : un ID ETB ne contient que des lettres, chiffres, points et tirets
 function etbIdValide(id: unknown): id is string {
   return typeof id === 'string' && /^[a-z0-9.\-]+$/i.test(id)
 }
 
-// GET /api/etbs
-router.get('/', async (_req: Request, res: Response) => {
+// GET /api/produits (alias /api/etbs) — filtrable par ?type=ETB|DISPLAY|...
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const etbs = await prisma.produit.findMany({ orderBy: { dateSortie: 'desc' } })
-    res.json(etbs)
+    const t = typeof req.query['type'] === 'string' ? req.query['type'].toUpperCase() : null
+    const where = t && TYPES_PRODUIT.includes(t) ? { type: t as ProduitType } : {}
+    const produits = await prisma.produit.findMany({ where, orderBy: { dateSortie: 'desc' } })
+    res.json(produits)
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' })
   }

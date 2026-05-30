@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchETBs } from '../services/api'
+import { fetchProduits } from '../services/api'
 import { Icon } from './Icon'
 import { SearchInput } from './ui'
 
@@ -40,7 +40,7 @@ export default function SeriesSidebar({ isOpen, onClose, currentId }) {
   const [expanded, setExpanded] = useState({})
 
   useEffect(() => {
-    fetchETBs().then(setEtbs).catch(() => {})
+    fetchProduits('ETB').then(setEtbs).catch(() => {})
   }, [])
 
   // Ère de l'ETB affichée : dépliée par défaut (tant que l'utilisateur n'a pas

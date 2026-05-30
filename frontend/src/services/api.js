@@ -39,6 +39,14 @@ export async function fetchETBs() {
   return res.json()
 }
 
+// Récupère les produits scellés, filtrables par type (ETB, DISPLAY, BOOSTER…)
+export async function fetchProduits(type) {
+  const q = type && type !== 'Tous' ? `?type=${encodeURIComponent(type)}` : ''
+  const res = await fetch(`${BASE_URL}/produits${q}`)
+  if (!res.ok) throw new Error('Erreur chargement produits')
+  return res.json()
+}
+
 // Récupère le détail d'une ETB par son id
 export async function fetchETB(id) {
   const res = await fetch(`${BASE_URL}/etbs/${id}`)

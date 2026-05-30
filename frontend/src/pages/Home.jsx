@@ -157,7 +157,7 @@ export default function Home() {
               </p>
               <div className="flex flex-wrap gap-3">
                 <button className="btn btn-accent" style={{ padding: '13px 22px', fontSize: 15 }} onClick={() => go('/catalogue')}>
-                  Explorer les {etbs.length || ''} ETB <Icon name="arrowRight" size={17} />
+                  Explorer le catalogue <Icon name="arrowRight" size={17} />
                 </button>
                 <button className="btn btn-ghost" style={{ padding: '13px 22px', fontSize: 15 }} onClick={() => go('/vault')}>
                   <Icon name="vault" size={17} /> Mon Vault
@@ -207,7 +207,7 @@ export default function Home() {
         {/* ── KPI ── */}
         <section className="mx-auto" style={{ maxWidth: 1180, padding: '8px clamp(18px,4vw,40px) clamp(36px,5vw,64px)' }}>
           <div className="card grid grid-cols-2 md:grid-cols-4" style={{ padding: 'clamp(20px,3vw,30px)', gap: 'clamp(20px,3vw,30px)' }}>
-            <KPI label="ETB suivies" value={etbs.length || '—'} />
+            <KPI label="Produits suivis" value={etbs.length || '—'} />
             <KPI label="Ères couvertes" value="6" />
             <KPI label="Valeur marché cumulée" value={totalVal > 0 ? eur0(totalVal) : '—'} />
             <KPI label="Depuis" value="2011" />
