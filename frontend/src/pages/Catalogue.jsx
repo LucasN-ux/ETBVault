@@ -29,7 +29,7 @@ function CatCard({ etb, go }) {
   const up = (etb.v30 ?? 0) >= 0
   const spark = (etb.series ?? []).slice(-30).map((p) => Number(p.cmPrixMoyen))
   return (
-    <button onClick={() => go(`/etb/${etb.id}`)} className="slab group text-left flex flex-col fadeUp">
+    <button onClick={() => go(`/produit/${etb.id}`)} className="slab group text-left flex flex-col fadeUp">
       <div className="slab__glare" />
       <div className="slab__stage" style={{ height: 150, padding: 16 }}>
         <BoxArt etb={etb} style={{ maxHeight: 122, height: 122, width: '90%' }} />

@@ -9,6 +9,7 @@ import { SearchInput } from './ui'
 // L'accordéon liste les ETB par ère ; l'ETB courante est surlignée.
 
 const ERES = ['Méga-Évolution', 'Écarlate et Violet', 'Épée et Bouclier', 'Soleil et Lune', 'XY', 'Noir et Blanc']
+const TYPE_LABEL = { ETB: 'ETB', DISPLAY: 'Displays', BOOSTER: 'Boosters', COFFRET: 'Coffrets', PREMIUM: 'Premium', TIN: 'Tins', BLISTER: 'Blisters', AUTRE: 'Produits' }
 
 function ETBLink({ etb, active, onClick }) {
   const img = etb.boxImageUrl ?? etb.box_image_url ?? etb.imageUrl ?? etb.image_url
@@ -33,15 +34,16 @@ function ETBLink({ etb, active, onClick }) {
   )
 }
 
-export default function SeriesSidebar({ isOpen, onClose, currentId }) {
+export default function SeriesSidebar({ isOpen, onClose, currentId, type = 'ETB' }) {
   const navigate = useNavigate()
   const [etbs, setEtbs] = useState([])
   const [q, setQ] = useState('')
   const [expanded, setExpanded] = useState({})
 
+  // Liste les produits du même type que celui affiché, groupés par ère.
   useEffect(() => {
-    fetchProduits('ETB').then(setEtbs).catch(() => {})
-  }, [])
+    fetchProduits(type).then(setEtbs).catch(() => {})
+  }, [type])
 
   // Ère de l'ETB affichée : dépliée par défaut (tant que l'utilisateur n'a pas
   // explicitement basculé son état dans `expanded`).
@@ -59,7 +61,7 @@ export default function SeriesSidebar({ isOpen, onClose, currentId }) {
   }, [etbs, q])
 
   function go(id) {
-    navigate(`/etb/${id}`)
+    navigate(`/produit/${id}`)
     onClose?.()
   }
   function toggle(era) {
@@ -81,7 +83,7 @@ export default function SeriesSidebar({ isOpen, onClose, currentId }) {
     >
       {/* en-tête */}
       <div className="flex items-center justify-between" style={{ padding: '14px 14px 0' }}>
-        <span className="display" style={{ fontSize: 15 }}>Séries</span>
+        <span className="display" style={{ fontSize: 15 }}>{TYPE_LABEL[type] ?? 'Produits'}</span>
         <button onClick={onClose} className="lg:hidden btn-quiet" style={{ padding: 6, borderRadius: 8, border: 0, cursor: 'pointer', display: 'flex' }} aria-label="Fermer">
           <Icon name="close" size={18} />
         </button>
