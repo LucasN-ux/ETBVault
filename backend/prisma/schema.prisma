@@ -7,6 +7,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
+// ── Compte utilisateur (auth JWT + bcrypt) ───────────────────────────────────
+// Deux rôles : USER (par défaut) et ADMIN (accès au panel admin).
+model User {
+  id             String       @id @default(cuid())
+  email          String       @unique
+  motDePasseHash String       @map("mot_de_passe_hash")
+  role           Role         @default(USER)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  vaultEntries   VaultEntry[]
+
+  @@map("users")
+}
+
 model Etb {
   id             String           @id
   nom            String
@@ -40,19 +58,19 @@ model Carte {
 }
 
 // ── Vault utilisateur ─────────────────────────────────────────────────────────
-// V1 : données en localStorage côté client, pas de userId
-// V2 : activer userId + relation User quand l'auth sera en place
+// Coffre persisté en base, rattaché à un compte (userId).
 model VaultEntry {
   id         Int      @id @default(autoincrement())
+  userId     String   @map("user_id")
   etbId      String   @map("etb_id")
   prixAchat  Decimal  @map("prix_achat") @db.Decimal(10, 2)
   quantite   Int      @default(1)
   dateAchat  DateTime @map("date_achat") @db.Date
   createdAt  DateTime @default(now()) @map("created_at")
-  // userId  String   @map("user_id")   ← décommenter en V2
-  // user    User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   etb        Etb      @relation(fields: [etbId], references: [id])
 
+  @@index([userId])
   @@map("vault_entries")
 }
 
