@@ -136,11 +136,11 @@ export default function Vault() {
           <div className="card" style={{ padding: 8 }}>
             {rows.map((r, i) => (
               <div key={r.id} className="group flex items-center gap-3.5" style={{ padding: '12px', borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                <button onClick={() => r.etb && go(`/etb/${r.etb.id}`)} className="shrink-0 surface-2 flex items-center justify-center overflow-hidden" style={{ width: 58, height: 44, borderRadius: 9 }}>
+                <button onClick={() => r.etb && go(`/produit/${r.etb.id}`)} className="shrink-0 surface-2 flex items-center justify-center overflow-hidden" style={{ width: 58, height: 44, borderRadius: 9 }}>
                   {r.etb ? <BoxArt etb={r.etb} style={{ height: 38, width: 50 }} /> : <span className="font-mono" style={{ fontSize: 9, color: 'var(--faint)' }}>{r.etbId}</span>}
                 </button>
                 <div className="min-w-0 flex-1">
-                  <button className="text-left truncate block w-full" style={{ fontSize: 14, fontWeight: 560 }} onClick={() => r.etb && go(`/etb/${r.etbId}`)}>{r.etb?.nom ?? r.etbId}</button>
+                  <button className="text-left truncate block w-full" style={{ fontSize: 14, fontWeight: 560 }} onClick={() => r.etb && go(`/produit/${r.etbId}`)}>{r.etb?.nom ?? r.etbId}</button>
                   <div className="font-mono" style={{ fontSize: 11.5, color: 'var(--faint)', marginTop: 2 }}>
                     {r.quantite > 1 ? `${r.quantite} × ` : ''}{eur(r.prixAchat)} · {r.dateAchat}
                   </div>

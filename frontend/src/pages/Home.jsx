@@ -24,7 +24,7 @@ function HeroSlab({ etb, periode, go }) {
   const up = (etb.variationPct ?? 0) >= 0
   const spark = prixSeries(etb.series, 30)
   return (
-    <button onClick={() => go(`/etb/${etb.id}`)} className="slab group w-full text-left fadeUp" style={{ animationDelay: '0.1s' }}>
+    <button onClick={() => go(`/produit/${etb.id}`)} className="slab group w-full text-left fadeUp" style={{ animationDelay: '0.1s' }}>
       <div className="slab__glare" />
       <div className="flex items-stretch">
         <div className="slab__stage shrink-0" style={{ width: '46%', minHeight: 220, padding: 22 }}>
@@ -62,7 +62,7 @@ function TrendRow({ etb, rang, periode, go }) {
   const spark = prixSeries(etb.series, 14)
   return (
     <button
-      onClick={() => go(`/etb/${etb.id}`)}
+      onClick={() => go(`/produit/${etb.id}`)}
       className="group w-full text-left flex items-center gap-4 transition-colors"
       style={{ padding: '13px 16px', borderRadius: 'var(--radius-sm)' }}
       onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
@@ -157,7 +157,7 @@ export default function Home() {
               </p>
               <div className="flex flex-wrap gap-3">
                 <button className="btn btn-accent" style={{ padding: '13px 22px', fontSize: 15 }} onClick={() => go('/catalogue')}>
-                  Explorer les {etbs.length || ''} ETB <Icon name="arrowRight" size={17} />
+                  Explorer le catalogue <Icon name="arrowRight" size={17} />
                 </button>
                 <button className="btn btn-ghost" style={{ padding: '13px 22px', fontSize: 15 }} onClick={() => go('/vault')}>
                   <Icon name="vault" size={17} /> Mon Vault
@@ -207,7 +207,7 @@ export default function Home() {
         {/* ── KPI ── */}
         <section className="mx-auto" style={{ maxWidth: 1180, padding: '8px clamp(18px,4vw,40px) clamp(36px,5vw,64px)' }}>
           <div className="card grid grid-cols-2 md:grid-cols-4" style={{ padding: 'clamp(20px,3vw,30px)', gap: 'clamp(20px,3vw,30px)' }}>
-            <KPI label="ETB suivies" value={etbs.length || '—'} />
+            <KPI label="Produits suivis" value={etbs.length || '—'} />
             <KPI label="Ères couvertes" value="6" />
             <KPI label="Valeur marché cumulée" value={totalVal > 0 ? eur0(totalVal) : '—'} />
             <KPI label="Depuis" value="2011" />

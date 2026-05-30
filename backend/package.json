@@ -10,11 +10,17 @@
     "seed": "node src/db/seed.js",
     "seed:prix": "node src/db/seedPrix.js",
     "seed:users": "tsx src/db/seed-users.ts",
+    "seed:produits": "tsx src/db/seed-produits.ts",
+    "backfill:cmids": "tsx src/db/backfill-etb-cmids.ts",
     "routes": "tsx src/db/list-routes.ts",
+    "cm:categories": "tsx src/db/cm-categories.ts",
     "studio": "prisma studio",
     "refresh:etb": "tsx src/db/run-cm-refresh.ts",
     "boxes": "python3 src/db/remove-bg-boxes.py && node src/db/update-box-images.js",
-    "test": "jest --testEnvironment node"
+    "test": "jest --testEnvironment node",
+    "enrich:eres": "tsx src/db/enrichir-eres.ts",
+    "audit": "tsx src/db/audit.ts",
+    "match:tcgdex": "tsx src/db/match-tcgdex.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

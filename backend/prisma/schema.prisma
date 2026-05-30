@@ -12,6 +12,19 @@ enum Role {
   ADMIN
 }
 
+// Type de produit scellé. ETB = produit historique ; les autres types sont
+// ajoutés au catalogue (displays, booster boxes, coffrets, tins, premium, blisters).
+enum ProduitType {
+  ETB
+  DISPLAY   // booster box / display (CM cat 53)
+  BOOSTER   // booster à l'unité (CM cat 52)
+  COFFRET   // box set non-premium (CM cat 1015)
+  PREMIUM   // premium collection (CM cat 1015, nom « Premium Collection »)
+  TIN       // CM cat 1014
+  BLISTER   // CM cat 1083
+  AUTRE
+}
+
 // ── Compte utilisateur (auth JWT + bcrypt) ───────────────────────────────────
 // Deux rôles : USER (par défaut) et ADMIN (accès au panel admin).
 model User {
@@ -25,10 +38,14 @@ model User {
   @@map("users")
 }
 
-model Etb {
+// Produit scellé Pokémon (ETB, display, booster box, coffret, tin, premium, blister…).
+// Table « etbs » conservée (via @@map) pour ne pas migrer les données existantes ;
+// le modèle est désormais générique. Les 66 ETB existants ont type = ETB par défaut.
+model Produit {
   id             String           @id
   nom            String
-  setId          String           @map("set_id")
+  type           ProduitType      @default(ETB)
+  setId          String?          @map("set_id")          // set d'appartenance (TCGdex), nullable
   era            String?
   imageUrl       String?          @map("image_url")
   boxImageUrl    String?          @map("box_image_url")
@@ -36,6 +53,7 @@ model Etb {
   prixSortie     Decimal?         @map("prix_sortie") @db.Decimal(10, 2)
   contenu        Json?
   cmUrl          String?          @map("cm_url")
+  cmIdProducts   Int[]            @default([]) @map("cm_id_products")  // idProduct Cardmarket pour les prix
   cartes         Carte[]
   prixHistorique PrixHistorique[]
   vaultEntries   VaultEntry[]
@@ -45,14 +63,14 @@ model Etb {
 
 model Carte {
   id         String   @id
-  etbId      String   @map("etb_id")
+  produitId  String   @map("etb_id")
   nom        String
   numero     String?
   imageUrl   String?  @map("image_url")
   rarete     String?
   prixMarche Decimal? @map("prix_marche") @db.Decimal(10, 2)
   misAJour   DateTime @default(now()) @map("mis_a_jour")
-  etb        Etb      @relation(fields: [etbId], references: [id])
+  produit    Produit  @relation(fields: [produitId], references: [id])
 
   @@map("cartes")
 }
@@ -62,13 +80,13 @@ model Carte {
 model VaultEntry {
   id         Int      @id @default(autoincrement())
   userId     String   @map("user_id")
-  etbId      String   @map("etb_id")
+  produitId  String   @map("etb_id")
   prixAchat  Decimal  @map("prix_achat") @db.Decimal(10, 2)
   quantite   Int      @default(1)
   dateAchat  DateTime @map("date_achat") @db.Date
   createdAt  DateTime @default(now()) @map("created_at")
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  etb        Etb      @relation(fields: [etbId], references: [id])
+  produit    Produit  @relation(fields: [produitId], references: [id])
 
   @@index([userId])
   @@map("vault_entries")
@@ -76,7 +94,7 @@ model VaultEntry {
 
 model PrixHistorique {
   id            Int      @id @default(autoincrement())
-  etbId         String   @map("etb_id")
+  produitId     String   @map("etb_id")
   date          DateTime @db.Date
   cmPrixMoyen   Decimal? @map("cm_prix_moyen") @db.Decimal(10, 2)
   cmPrixBas     Decimal? @map("cm_prix_bas") @db.Decimal(10, 2)
@@ -84,8 +102,8 @@ model PrixHistorique {
   ebayPrixMoyen     Decimal? @map("ebay_prix_moyen") @db.Decimal(10, 2)
   // Provenance du point : 'collecte' (cron quotidien) ou 'import_cm' (amorçage rétroactif). Cf. CLAUDE.md.
   origine           String   @default("collecte")
-  etb           Etb      @relation(fields: [etbId], references: [id])
+  produit       Produit  @relation(fields: [produitId], references: [id])
 
-  @@unique([etbId, date])
+  @@unique([produitId, date])
   @@map("prix_historique")
 }
