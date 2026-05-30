@@ -10,7 +10,7 @@ router.use(requireAuth)
 function serialize(e: VaultEntry) {
   return {
     id: e.id,
-    etbId: e.etbId,
+    etbId: e.produitId,
     prixAchat: Number(e.prixAchat),
     quantite: e.quantite,
     dateAchat: e.dateAchat.toISOString().split('T')[0]!,
@@ -36,13 +36,13 @@ router.post('/', async (req, res) => {
     res.status(400).json({ error: 'etbId et prixAchat (> 0) requis' })
     return
   }
-  const etb = await prisma.etb.findUnique({ where: { id: etbId } })
-  if (!etb) {
-    res.status(404).json({ error: 'ETB inconnue' })
+  const produit = await prisma.produit.findUnique({ where: { id: etbId } })
+  if (!produit) {
+    res.status(404).json({ error: 'Produit inconnu' })
     return
   }
   const entry = await prisma.vaultEntry.create({
-    data: { userId: req.user!.id, etbId, prixAchat, quantite, dateAchat },
+    data: { userId: req.user!.id, produitId: etbId, prixAchat, quantite, dateAchat },
   })
   res.status(201).json(serialize(entry))
 })
