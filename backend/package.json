@@ -20,7 +20,9 @@
     "test": "jest --testEnvironment node",
     "enrich:eres": "tsx src/db/enrichir-eres.ts",
     "audit": "tsx src/db/audit.ts",
-    "match:tcgdex": "tsx src/db/match-tcgdex.ts"
+    "match:tcgdex": "tsx src/db/match-tcgdex.ts",
+    "enrich:series": "tsx src/db/enrichir-series.ts",
+    "propager:series": "tsx src/db/propager-series.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
