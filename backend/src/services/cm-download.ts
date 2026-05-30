@@ -4,7 +4,6 @@
 
 import { chromium } from 'playwright'
 import prisma from '../db/client'
-import { ETB_PRODUCT_IDS } from './cm-products'
 
 interface CmPrixEntry {
   idProduct: number
@@ -85,11 +84,10 @@ async function telechargerPrixGuide(): Promise<Record<number, { trend: number | 
   }
 }
 
-function calculerPrixPourETB(
+function calculerPrix(
   prixIndex: Record<number, { trend: number | null; low: number | null }>,
-  etbId: string,
+  ids: number[],
 ): { cmPrixMoyen: number | null; cmPrixBas: number | null } {
-  const ids = ETB_PRODUCT_IDS[etbId]
   if (!ids || ids.length === 0) return { cmPrixMoyen: null, cmPrixBas: null }
 
   const trends: number[] = []
@@ -115,16 +113,19 @@ export async function mettreAJourPrixDepuisCM(): Promise<{ ok: number; sans_prix
   const aujourd = new Date()
   aujourd.setHours(0, 0, 0, 0)
 
-  const etbIds = Object.keys(ETB_PRODUCT_IDS)
+  // Tous les produits ayant au moins un idProduct CM (ETB curés + catalogue ingéré).
+  const produits = await prisma.produit.findMany({
+    where: { cmIdProducts: { isEmpty: false } },
+    select: { id: true, cmIdProducts: true },
+  })
   let ok = 0
   let sans_prix = 0
   let inchanges = 0
 
-  for (const etbId of etbIds) {
-    const { cmPrixMoyen, cmPrixBas } = calculerPrixPourETB(prixIndex, etbId)
+  for (const { id: etbId, cmIdProducts } of produits) {
+    const { cmPrixMoyen, cmPrixBas } = calculerPrix(prixIndex, cmIdProducts)
 
     if (cmPrixMoyen === null) {
-      console.warn(`[cm-download] ${etbId}: aucun prix tendance disponible`)
       sans_prix++
       continue
     }
