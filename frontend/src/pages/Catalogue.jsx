@@ -1,12 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { fetchETBs, fetchSparklines, fetchPrixActuels } from '../services/api'
+import { fetchProduits, fetchSparklines, fetchPrixActuels } from '../services/api'
 import { detecterMouvement } from '../utils/mouvement'
 import { Icon } from '../components/Icon'
 import Sparkline from '../components/Sparkline'
 import { BoxArt, MovementBadge, Price, VarNum, SearchInput, Chip, EraTag } from '../components/ui'
 
 const ERES = ['Méga-Évolution', 'Écarlate et Violet', 'Épée et Bouclier', 'Soleil et Lune', 'XY', 'Noir et Blanc']
+// Types de produits (filtre principal). Pas de « Tous » : le catalogue compte des milliers de produits.
+const TYPES = [
+  { k: 'ETB', l: 'ETB' },
+  { k: 'DISPLAY', l: 'Displays' },
+  { k: 'BOOSTER', l: 'Boosters' },
+  { k: 'COFFRET', l: 'Coffrets' },
+  { k: 'PREMIUM', l: 'Premium' },
+  { k: 'TIN', l: 'Tins' },
+  { k: 'BLISTER', l: 'Blisters' },
+]
+const TYPE_LABEL = Object.fromEntries(TYPES.map((t) => [t.k, t.l]))
 const TRIS = [
   { k: 'date', l: 'Sortie' },
   { k: 'prix', l: 'Prix' },
@@ -18,7 +29,7 @@ function CatCard({ etb, go }) {
   const up = (etb.v30 ?? 0) >= 0
   const spark = (etb.series ?? []).slice(-30).map((p) => Number(p.cmPrixMoyen))
   return (
-    <button onClick={() => go(`/etb/${etb.id}`)} className="slab group text-left flex flex-col fadeUp">
+    <button onClick={() => go(`/produit/${etb.id}`)} className="slab group text-left flex flex-col fadeUp">
       <div className="slab__glare" />
       <div className="slab__stage" style={{ height: 150, padding: 16 }}>
         <BoxArt etb={etb} style={{ maxHeight: 122, height: 122, width: '90%' }} />
@@ -32,7 +43,7 @@ function CatCard({ etb, go }) {
       <div className="flex flex-col" style={{ padding: '12px 14px 14px', borderTop: '1px solid var(--border)', gap: 6 }}>
         <div>
           <div className="truncate" style={{ fontSize: 14, fontWeight: 580 }}>{etb.nom}</div>
-          <EraTag>{etb.era}{etb.annee ? ` · ${etb.annee}` : ''}</EraTag>
+          <EraTag>{etb.type && etb.type !== 'ETB' ? (TYPE_LABEL[etb.type] ?? etb.type) : `${etb.era ?? ''}${etb.annee ? ` · ${etb.annee}` : ''}`}</EraTag>
         </div>
         <div className="flex items-end justify-between mt-1">
           <Price value={etb.prixActuel} size={16} />
@@ -53,20 +64,26 @@ export default function Catalogue() {
   const [prixActuels, setPrixActuels] = useState({})
   const [q, setQ] = useState(searchParams.get('q') ?? '')
   const [era, setEra] = useState(searchParams.get('ere') ?? 'Toutes')
+  const [type, setType] = useState(searchParams.get('type') ?? 'ETB')
   const [tri, setTri] = useState('date')
 
   useEffect(() => {
-    fetchETBs().then(setEtbs).catch(() => {})
     fetchSparklines(30).then(setSparks).catch(() => {})
     fetchPrixActuels().then(setPrixActuels).catch(() => {})
   }, [])
+
+  // Recharge le catalogue quand le type change (filtre serveur — gros volume).
+  useEffect(() => {
+    fetchProduits(type).then(setEtbs).catch(() => {})
+  }, [type])
 
   useEffect(() => {
     const p = {}
     if (q) p.q = q
     if (era !== 'Toutes') p.ere = era
+    if (type !== 'ETB') p.type = type
     setSearchParams(p, { replace: true })
-  }, [q, era]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [q, era, type]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Enrichit chaque ETB : série, prix actuel, variation 30j, mouvement 30j
   const enrichies = useMemo(() => {
@@ -84,7 +101,8 @@ export default function Catalogue() {
 
   const filtered = useMemo(() => {
     let list = enrichies.slice()
-    if (era !== 'Toutes') list = list.filter((e) => e.era === era)
+    if (era === 'Autres') list = list.filter((e) => !ERES.includes(e.era))
+    else if (era !== 'Toutes') list = list.filter((e) => e.era === era)
     if (q.trim()) {
       const s = q.toLowerCase()
       list = list.filter((e) => e.nom.toLowerCase().includes(s) || e.id.includes(s))
@@ -99,7 +117,10 @@ export default function Catalogue() {
   const grouped = era === 'Toutes' && tri === 'date'
   const groups = useMemo(() => {
     if (!grouped) return null
-    return ERES.map((er) => ({ era: er, list: filtered.filter((e) => e.era === er) })).filter((g) => g.list.length)
+    const g = ERES.map((er) => ({ era: er, list: filtered.filter((e) => e.era === er) })).filter((x) => x.list.length)
+    const autres = filtered.filter((e) => !ERES.includes(e.era))
+    if (autres.length) g.push({ era: 'Autres', list: autres })
+    return g
   }, [filtered, grouped])
 
   return (
@@ -107,17 +128,23 @@ export default function Catalogue() {
       <section className="mx-auto" style={{ maxWidth: 1180, padding: 'clamp(24px,4vw,44px) clamp(18px,4vw,40px) 0' }}>
         <h1 className="display" style={{ fontSize: 'clamp(26px,3vw,38px)', marginBottom: 6 }}>Catalogue</h1>
         <p style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 24 }}>
-          {etbs.length || '—'} Elite Trainer Box · 6 ères · prix Cardmarket France
+          {etbs.length || '—'} {TYPE_LABEL[type] ?? 'produits'} · prix Cardmarket France
         </p>
       </section>
 
       {/* filtres sticky */}
       <div style={{ position: 'sticky', top: 57, zIndex: 20, background: 'color-mix(in oklch, var(--bg) 88%, transparent)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)' }}>
         <div className="mx-auto flex flex-col gap-3" style={{ maxWidth: 1180, padding: '14px clamp(18px,4vw,40px)' }}>
-          <SearchInput value={q} onChange={setQ} placeholder="Rechercher une ETB…" />
+          <SearchInput value={q} onChange={setQ} placeholder="Rechercher un produit…" />
+          {/* Filtre principal : type de produit */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar" style={{ paddingBottom: 2 }}>
+            {TYPES.map((t) => <Chip key={t.k} active={type === t.k} onClick={() => { setType(t.k); setEra('Toutes') }}>{t.l}</Chip>)}
+          </div>
+          {/* Ères + tri */}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar" style={{ paddingBottom: 2 }}>
             <Chip active={era === 'Toutes'} onClick={() => setEra('Toutes')}>Toutes</Chip>
             {ERES.map((er) => <Chip key={er} active={era === er} onClick={() => setEra(er)}>{er}</Chip>)}
+            <Chip active={era === 'Autres'} onClick={() => setEra('Autres')}>Autres</Chip>
             <span style={{ width: 1, height: 18, background: 'var(--border-2)', margin: '0 6px', flexShrink: 0 }} />
             <span className="flex items-center shrink-0" style={{ color: 'var(--faint)' }}>
               <Icon name="sort" size={14} />

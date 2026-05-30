@@ -110,7 +110,7 @@ export default function ETBDetail() {
   return (
     <div className="lg:flex" style={{ position: 'relative', zIndex: 1 }}>
       {/* rail gauche : navigateur de séries (drawer sur mobile) */}
-      <SeriesSidebar isOpen={seriesOpen} onClose={() => setSeriesOpen(false)} currentId={id} />
+      <SeriesSidebar isOpen={seriesOpen} onClose={() => setSeriesOpen(false)} currentId={id} type={etb.type ?? 'ETB'} />
       {seriesOpen && (
         <div className="fixed inset-0 lg:hidden" onClick={() => setSeriesOpen(false)} style={{ background: 'oklch(0 0 0 / 0.6)', zIndex: 35 }} />
       )}

@@ -100,7 +100,7 @@ export default function VaultHomeCard() {
 
             <div className="grid sm:grid-cols-3 gap-2.5 mt-5">
               {alloc.slice(0, 3).map((r) => (
-                <button key={r.id} onClick={() => r.etb && navigate(`/etb/${r.etbId}`)} className="flex items-center gap-3 text-left transition-colors" style={{ padding: '9px 11px', borderRadius: 'var(--radius-sm)', background: 'var(--surface-2)' }}>
+                <button key={r.id} onClick={() => r.etb && navigate(`/produit/${r.etbId}`)} className="flex items-center gap-3 text-left transition-colors" style={{ padding: '9px 11px', borderRadius: 'var(--radius-sm)', background: 'var(--surface-2)' }}>
                   <div className="shrink-0 flex items-center justify-center overflow-hidden" style={{ width: 44, height: 32, borderRadius: 7, background: 'var(--surface-3)' }}>
                     {r.etb ? <BoxArt etb={r.etb} style={{ height: 28, width: 38 }} /> : <span className="font-mono" style={{ fontSize: 8, color: 'var(--faint)' }}>{r.etbId}</span>}
                   </div>
