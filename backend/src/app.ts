@@ -94,6 +94,33 @@ app.get('/api/tendances', async (req, res) => {
   }
 })
 
+// GET /api/sparklines?jours=30 — mini-historique de prix pour TOUTES les ETBs
+// en 1 seule requête (alimente les mini-courbes du catalogue / home).
+// Retour : { etbId: [{ date, cmPrixMoyen }] } (ordre chronologique).
+app.get('/api/sparklines', async (req, res) => {
+  const { default: prisma } = await import('./db/client')
+  const jours = Math.min(400, Math.max(7, Number(req.query['jours']) || 30))
+  try {
+    const rows = await prisma.$queryRaw<Array<{ etb_id: string; date: Date; cm_prix_moyen: string }>>`
+      SELECT etb_id, date, cm_prix_moyen
+      FROM prix_historique
+      WHERE cm_prix_moyen IS NOT NULL
+        AND date >= CURRENT_DATE - (${jours} * INTERVAL '1 day')
+      ORDER BY etb_id, date ASC
+    `
+    const map: Record<string, Array<{ date: string; cmPrixMoyen: number }>> = {}
+    for (const r of rows) {
+      ;(map[r.etb_id] ??= []).push({
+        date: r.date.toISOString().split('T')[0]!,
+        cmPrixMoyen: Number(r.cm_prix_moyen),
+      })
+    }
+    res.json(map)
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' })
+  }
+})
+
 // POST /api/admin/refresh — déclenche manuellement les deux mises à jour
 // ETB (Cardmarket) + cartes (TCGdex) — upsert, sans doublon
 app.post('/api/admin/refresh', async (_req, res) => {

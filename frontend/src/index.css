@@ -1,3 +1,215 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================================================
+   ETBVault — design tokens & styles signature (direction « Vault / or »)
+   Portés du handoff design_handoff_etbvault/app/styles.css.
+   Un seul thème (vault) appliqué via .etbv-root ; structuré sous data-theme
+   pour pouvoir rebrancher d'autres thèmes plus tard sans refonte.
+   ============================================================================ */
+
+:root {
+  --up:   oklch(0.74 0.15 158);
+  --down: oklch(0.66 0.20 25);
+  --up-soft:   oklch(0.74 0.15 158 / 0.14);
+  --down-soft: oklch(0.66 0.20 25 / 0.14);
+  --new:  oklch(0.72 0.12 250);
+  --new-soft: oklch(0.72 0.12 250 / 0.16);
+
+  --font-display: 'Geist', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---- VAULT : near-black chaud, or premium, aéré ---- */
+.etbv-root,
+[data-theme='vault'] {
+  --bg:        oklch(0.165 0.008 75);
+  --bg-2:      oklch(0.145 0.008 75);
+  --surface:   oklch(0.215 0.009 75);
+  --surface-2: oklch(0.255 0.011 75);
+  --surface-3: oklch(0.30 0.013 75);
+  --border:    oklch(1 0 0 / 0.07);
+  --border-2:  oklch(1 0 0 / 0.12);
+  --text:      oklch(0.965 0.005 80);
+  --text-2:    oklch(0.80 0.01 80);
+  --muted:     oklch(0.64 0.012 80);
+  --faint:     oklch(0.46 0.012 80);
+  --accent:    oklch(0.82 0.135 80);
+  --accent-2:  oklch(0.88 0.10 85);
+  --accent-ink: oklch(0.22 0.04 75);
+  --accent-soft: oklch(0.82 0.135 80 / 0.14);
+  --radius:    18px;
+  --radius-sm: 12px;
+  --shadow:    0 1px 0 oklch(1 0 0 / 0.04) inset, 0 18px 40px -20px oklch(0 0 0 / 0.7);
+  --shadow-lg: 0 1px 0 oklch(1 0 0 / 0.05) inset, 0 40px 80px -30px oklch(0 0 0 / 0.8);
+  --display-weight: 650;
+  --tracking: -0.02em;
+}
+
+/* ============================================================================ */
+
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; padding: 0; min-height: 100%; }
+
+.etbv-root {
+  font-family: var(--font-display);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  letter-spacing: var(--tracking);
+  min-height: 100vh;
+  position: relative;
+  font-variant-numeric: tabular-nums;
+}
+
+.font-mono { font-family: var(--font-mono); font-feature-settings: 'tnum' 1; }
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* titres */
+.display { font-weight: var(--display-weight); letter-spacing: var(--tracking); line-height: 1.02; }
+
+/* ---- surfaces ---- */
+.surface { background: var(--surface); }
+.surface-2 { background: var(--surface-2); }
+
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+
+/* ---- le SLAB : présentation signature d'une ETB (effet carte gradée) ---- */
+.slab {
+  position: relative;
+  border-radius: var(--radius);
+  background: radial-gradient(120% 80% at 50% 0%, var(--surface-2), var(--surface));
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: transform 0.45s var(--ease), box-shadow 0.45s var(--ease), border-color 0.3s var(--ease);
+}
+.slab:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--border-2); }
+.slab__stage {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(80% 70% at 50% 30%, oklch(1 0 0 / 0.05), transparent 70%);
+}
+.slab__glare {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, oklch(1 0 0 / 0.06) 47%, transparent 60%);
+  opacity: 0; transition: opacity 0.5s var(--ease);
+}
+.slab:hover .slab__glare { opacity: 1; }
+
+/* placeholder rayé (box / carte sans visuel) */
+.ph {
+  background-color: var(--surface-2);
+  background-image: repeating-linear-gradient(
+    -45deg, oklch(1 0 0 / 0.03) 0 8px, transparent 8px 16px);
+  color: var(--faint);
+  display: flex; align-items: center; justify-content: center;
+  text-align: center; font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+/* ---- boutons ---- */
+.btn {
+  font-family: var(--font-display); font-weight: 560;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer; transition: all 0.2s var(--ease);
+  display: inline-flex; align-items: center; gap: 8px;
+  letter-spacing: -0.01em; white-space: nowrap;
+}
+.btn-accent { background: var(--accent); color: var(--accent-ink); }
+.btn-accent:hover { background: var(--accent-2); transform: translateY(-1px); }
+.btn-ghost { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+.btn-ghost:hover { background: var(--surface-3); border-color: var(--border-2); }
+.btn-quiet { background: transparent; color: var(--text-2); }
+.btn-quiet:hover { color: var(--text); background: var(--surface-2); }
+
+/* ---- chips / onglets ---- */
+.chip {
+  border-radius: 999px; cursor: pointer; transition: all 0.18s var(--ease);
+  background: var(--surface-2); color: var(--muted); border: 1px solid transparent;
+  font-weight: 500; white-space: nowrap;
+}
+.chip:hover { color: var(--text); }
+.chip[data-active='true'] {
+  background: var(--accent); color: var(--accent-ink); font-weight: 600;
+}
+
+/* badge de mouvement */
+.mv { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px;
+  font-weight: 600; font-family: var(--font-mono); letter-spacing: 0; }
+.mv-up { background: var(--up-soft); color: var(--up); }
+.mv-down { background: var(--down-soft); color: var(--down); }
+.mv-flat { background: var(--surface-2); color: var(--muted); }
+.mv-new { background: var(--new-soft); color: var(--new); }
+.dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+
+/* ticker (bande défilante) */
+.ticker-track { display: flex; gap: 0; width: max-content; animation: ticker 48s linear infinite; }
+.etbv-root:hover .ticker-track { animation-play-state: paused; }
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* entrées : transform-only (jamais opacity:0 → contenu jamais invisible) */
+@keyframes fadeUp { from { transform: translateY(16px); } to { transform: none; } }
+.fadeUp { animation: fadeUp 0.55s var(--ease) both; }
+@keyframes pop { from { transform: scale(0.97); } to { transform: none; } }
+.pop { animation: pop 0.3s var(--ease) both; }
+@media (prefers-reduced-motion: reduce) { .fadeUp, .pop, .ticker-track { animation: none; } }
+
+/* barres de défilement */
+.etbv-root ::-webkit-scrollbar { width: 9px; height: 9px; }
+.etbv-root ::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 999px; border: 2px solid var(--bg); }
+.etbv-root ::-webkit-scrollbar-track { background: transparent; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+/* lien souligné */
+.ulink { color: var(--accent); cursor: pointer; font-weight: 540; }
+.ulink:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* anneau de focus */
+.etbv-root :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* zoom image au survol (via .group) */
+.zoomable { transition: transform 0.5s var(--ease); }
+.group:hover .zoomable { transform: scale(1.05); }
+
+/* divider */
+.hr { height: 1px; background: var(--border); border: 0; }
+
+/* valeur KPI */
+.kpi-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* contrôle segmenté */
+.seg { display: inline-flex; background: var(--surface-2); border-radius: var(--radius-sm); padding: 3px; gap: 2px; }
+.seg button { border-radius: calc(var(--radius-sm) - 2px); border: 0; cursor: pointer;
+  background: transparent; color: var(--muted); font-family: var(--font-display); font-weight: 540;
+  transition: all 0.18s var(--ease); }
+.seg button[data-active='true'] { background: var(--accent); color: var(--accent-ink); }
+.seg button:hover:not([data-active='true']) { color: var(--text); }
+
+/* halo en haut du hero */
+.hero-glow { position: relative; }
+.hero-glow::before {
+  content: ''; position: absolute; left: 50%; top: -10%; width: 70%; height: 320px;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, var(--accent-soft), transparent 70%);
+  filter: blur(40px); pointer-events: none; z-index: 0;
+}
+
+/* champ select/input natif harmonisé */
+.field {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text);
+  padding: 11px 14px; font-size: 14px; outline: none; width: 100%;
+}
+.field:focus { border-color: var(--border-2); }
