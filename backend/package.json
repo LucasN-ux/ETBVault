@@ -11,6 +11,7 @@
     "seed:prix": "node src/db/seedPrix.js",
     "seed:users": "tsx src/db/seed-users.ts",
     "seed:produits": "tsx src/db/seed-produits.ts",
+    "backfill:cmids": "tsx src/db/backfill-etb-cmids.ts",
     "routes": "tsx src/db/list-routes.ts",
     "cm:categories": "tsx src/db/cm-categories.ts",
     "studio": "prisma studio",
