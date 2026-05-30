@@ -9,6 +9,9 @@
     "typecheck": "tsc --noEmit",
     "seed": "node src/db/seed.js",
     "seed:prix": "node src/db/seedPrix.js",
+    "seed:users": "tsx src/db/seed-users.ts",
+    "routes": "tsx src/db/list-routes.ts",
+    "studio": "prisma studio",
     "refresh:etb": "tsx src/db/run-cm-refresh.ts",
     "boxes": "python3 src/db/remove-bg-boxes.py && node src/db/update-box-images.js",
     "test": "jest --testEnvironment node"
@@ -16,19 +19,26 @@
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "axios": "^1.7.0",
+    "bcryptjs": "^3.0.3",
     "cheerio": "^1.2.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.0",
     "express": "^4.19.0",
+    "jsonwebtoken": "^9.0.3",
     "node-cron": "^4.2.1",
     "playwright": "^1.60.0",
-    "prisma": "^5.22.0"
+    "prisma": "^5.22.0",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.9.1",
     "@types/node-cron": "^3.0.11",
+    "@types/swagger-ui-express": "^4.1.8",
+    "express-list-endpoints": "^7.1.1",
     "jest": "^29.7.0",
     "supertest": "^7.0.0",
     "ts-node": "^10.9.2",
