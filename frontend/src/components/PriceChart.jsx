@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react'
+import { useId, useMemo, useState } from 'react'
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -10,18 +10,24 @@ import {
   ReferenceLine,
 } from 'recharts'
 import { serieJours, serieMois } from '../utils/serieGraphe'
+import { Segmented, Price, VarNum } from './ui'
 
-// Amplitude verticale minimale (en % du prix médian) : le plat doit RESTER plat,
-// sinon l'axe auto zoome sur du bruit et dramatise un mouvement insignifiant.
+// Couleurs concrètes (les attributs SVG ne résolvent pas var(--…))
+const GOLD = '#e3b341' // ≈ oklch(0.82 0.135 80)
+const RED = '#e0654f' // ≈ oklch(0.66 0.20 25), repère « prix de sortie »
+const GRID = 'rgba(255,255,255,0.07)'
+const AXIS = '#8a8378'
+
+// Amplitude verticale minimale (en % du prix médian) : le plat doit RESTER plat.
 const AMPLITUDE_MIN = 0.08
 
 const MODES = [
-  { key: 'jours', label: 'Jours' }, // 7 derniers jours, 1 point/jour
-  { key: 'mois', label: 'Mois' },   // jusqu'à 12 mois, 1 point/mois (médiane)
+  { value: 'jours', label: 'Jours' }, // 7 derniers jours, 1 point/jour
+  { value: 'mois', label: 'Mois' },   // jusqu'à 12 mois, 1 point/mois (médiane)
 ]
 const SOURCES = [
   { key: 'cm', label: 'Cardmarket', dispo: true },
-  { key: 'ebay', label: 'eBay', dispo: false }, // à venir (V2)
+  { key: 'ebay', label: 'eBay', dispo: false }, // V2
 ]
 
 function formatJour(iso) {
@@ -37,22 +43,23 @@ function CustomTooltip({ active, payload }) {
   const d = payload[0]?.payload
   if (!d) return null
   return (
-    <div className="bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-sm shadow-xl">
-      <p className="text-gray-400 text-xs mb-1.5">{d.label}</p>
-      <p className="text-pokemon-yellow font-bold">{Number(d.prix).toFixed(2).replace('.', ',')} €</p>
-      {d.n != null && (
-        <p className="text-gray-600 text-[10px] mt-1">médiane de {d.n} relevé{d.n > 1 ? 's' : ''}</p>
-      )}
+    <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 'var(--radius-sm)', padding: '7px 10px', boxShadow: 'var(--shadow)', whiteSpace: 'nowrap' }}>
+      <div style={{ fontSize: 10.5, color: 'var(--muted)', marginBottom: 2 }}>{d.label}</div>
+      <div className="font-mono" style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent)' }}>
+        {Number(d.prix).toFixed(2).replace('.', ',')} €
+      </div>
+      {d.n != null && <div style={{ fontSize: 10, color: 'var(--faint)', marginTop: 2 }}>médiane de {d.n} relevé{d.n > 1 ? 's' : ''}</div>}
     </div>
   )
 }
 
-export default function PriceChart({ historique, prixSortie, compact = false }) {
-  const [mode, setMode] = useState('jours')  // 'jours' | 'mois'
-  const [source, setSource] = useState('cm') // 'cm' | 'ebay'
+export default function PriceChart({ historique, prixSortie, height = 230 }) {
+  const gid = useId().replace(/:/g, '')
+  const [mode, setMode] = useState('jours')
+  const [source, setSource] = useState('cm')
 
   const data = useMemo(() => {
-    if (source !== 'cm') return [] // eBay pas encore branché
+    if (source !== 'cm') return []
     return mode === 'jours'
       ? serieJours(historique, 7).map((p) => ({ x: p.date, label: formatJour(p.date), prix: p.prix }))
       : serieMois(historique, 12).map((p) => ({ x: p.mois, label: formatMois(p.mois), prix: p.prix, n: p.n }))
@@ -61,9 +68,7 @@ export default function PriceChart({ historique, prixSortie, compact = false }) 
   const prixActuel = data.length > 0 ? data[data.length - 1].prix : 0
   const prixDebut = data.length >= 2 ? data[0].prix : 0
   const variation = prixDebut > 0 ? ((prixActuel - prixDebut) / prixDebut) * 100 : null
-  const plusHaut = data.length > 0 ? Math.max(...data.map((d) => d.prix)) : 0
 
-  // Domaine Y : amplitude minimale pour que le plat reste plat + padding
   const domaineY = useMemo(() => {
     const prix = data.map((d) => d.prix).filter(Number.isFinite)
     if (prix.length === 0) return ['auto', 'auto']
@@ -71,135 +76,80 @@ export default function PriceChart({ historique, prixSortie, compact = false }) 
     let hi = Math.max(...prix)
     const mid = (lo + hi) / 2 || prix[0]
     const minSpan = mid * AMPLITUDE_MIN
-    if (hi - lo < minSpan) {
-      lo = mid - minSpan / 2
-      hi = mid + minSpan / 2
-    }
-    const pad = (hi - lo) * 0.1
+    if (hi - lo < minSpan) { lo = mid - minSpan / 2; hi = mid + minSpan / 2 }
+    if (prixSortie > 0) { lo = Math.min(lo, prixSortie); hi = Math.max(hi, prixSortie) }
+    const pad = (hi - lo) * 0.12
     return [Math.max(0, Math.floor(lo - pad)), Math.ceil(hi + pad)]
-  }, [data])
-
-  const chartHeight = compact ? 160 : 220
+  }, [data, prixSortie])
 
   if (!historique || historique.length === 0) {
     return (
-      <div className="flex items-center justify-center h-36 text-gray-500 text-sm">
+      <div className="flex items-center justify-center" style={{ height, color: 'var(--muted)', fontSize: 13 }}>
         Aucune donnée de prix disponible.
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col gap-3">
-
-      {/* Stats + toggle Jours / Mois */}
+    <div className="flex flex-col" style={{ gap: 12 }}>
+      {/* en-tête : prix + variation | bascule Jours/Mois */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex gap-3 text-xs">
-          <span className="text-pokemon-yellow font-bold text-sm">
-            {prixActuel > 0 ? `${prixActuel.toFixed(2).replace('.', ',')} €` : '—'}
-          </span>
-          {variation !== null && (
-            <span className={`font-semibold self-center ${variation >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {variation >= 0 ? '+' : ''}{variation.toFixed(1)}%
-            </span>
-          )}
-          {plusHaut > 0 && (
-            <span className="text-gray-500 self-center hidden sm:inline">Max : {plusHaut.toFixed(0)} €</span>
-          )}
+        <div className="flex items-baseline gap-3">
+          <Price value={prixActuel} size={18} />
+          {variation !== null && <VarNum v={variation} size={13.5} />}
         </div>
-
-        <div className="flex bg-gray-800 rounded-lg p-0.5 gap-0.5">
-          {MODES.map((m) => (
-            <button
-              key={m.key}
-              onClick={() => setMode(m.key)}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                mode === m.key ? 'bg-pokemon-yellow text-gray-900' : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
+        <Segmented value={mode} onChange={setMode} options={MODES} />
       </div>
 
-      {/* Graphique */}
-      <div className="bg-gray-800/40 rounded-xl border border-gray-700/50 p-3">
-        {data.length === 0 ? (
-          <div className="flex items-center justify-center text-gray-500 text-xs" style={{ height: chartHeight }}>
-            {source === 'ebay'
-              ? 'Source eBay bientôt disponible.'
-              : mode === 'mois'
-                ? 'Pas encore assez d’historique mensuel — ça se remplit avec le temps.'
-                : 'Aucune donnée pour cette période.'}
+      {/* graphe */}
+      {data.length === 0 ? (
+        <div className="flex items-center justify-center" style={{ height, color: 'var(--faint)', fontSize: 12.5 }}>
+          {source === 'ebay'
+            ? 'Source eBay bientôt disponible.'
+            : mode === 'mois'
+              ? 'Pas encore assez d’historique mensuel — ça se remplit avec le temps.'
+              : 'Aucune donnée pour cette période.'}
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={height}>
+          <AreaChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+            <defs>
+              <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={GOLD} stopOpacity={0.22} />
+                <stop offset="100%" stopColor={GOLD} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid stroke={GRID} vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: AXIS, fontSize: 10 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+            <YAxis tick={{ fill: AXIS, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}€`} domain={domaineY} width={48} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.18)', strokeWidth: 1 }} />
+            {prixSortie > 0 && (
+              <ReferenceLine y={prixSortie} stroke={RED} strokeDasharray="4 4" strokeWidth={1} ifOverflow="extendDomain"
+                label={{ value: 'sortie', position: 'insideTopLeft', fill: RED, fontSize: 9.5 }} />
+            )}
+            <Area type="monotone" dataKey="prix" stroke={GOLD} strokeWidth={2.2} fill={`url(#${gid})`}
+              dot={false} activeDot={{ r: 4.5, fill: GOLD, stroke: 'var(--bg)', strokeWidth: 2 }} isAnimationActive={false} />
+          </AreaChart>
+        </ResponsiveContainer>
+      )}
+
+      {/* sélecteur de source + repère sortie */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2" style={{ fontSize: 11, color: 'var(--faint)' }}>
+          <span style={{ width: 16, borderTop: `1px dashed ${RED}` }} /> prix de sortie · source Cardmarket
+        </div>
+        <div className="flex items-center gap-2">
+          <span style={{ fontSize: 10.5, color: 'var(--faint)' }}>Source</span>
+          <div className="seg">
+            {SOURCES.map((s) => (
+              <button key={s.key} data-active={source === s.key} disabled={!s.dispo}
+                onClick={() => s.dispo && setSource(s.key)}
+                title={s.dispo ? undefined : 'Bientôt disponible'}
+                style={{ fontSize: 11.5, padding: '5px 10px', cursor: s.dispo ? 'pointer' : 'not-allowed', opacity: s.dispo ? 1 : 0.5 }}>
+                {s.label}{!s.dispo && ' · bientôt'}
+              </button>
+            ))}
           </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={chartHeight}>
-            <LineChart data={data} margin={{ top: 4, right: compact ? 8 : 12, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
-              <XAxis
-                dataKey="label"
-                tick={{ fill: '#6B7280', fontSize: 9 }}
-                axisLine={false}
-                tickLine={false}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                tick={{ fill: '#6B7280', fontSize: 9 }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v) => `${v}€`}
-                domain={domaineY}
-                width={50}
-              />
-              <Tooltip content={<CustomTooltip />} />
-
-              {/* Repère factuel : prix de sortie officiel */}
-              {prixSortie > 0 && (
-                <ReferenceLine
-                  y={prixSortie}
-                  stroke="#CC0000"
-                  strokeDasharray="4 3"
-                  strokeWidth={1}
-                  label={compact ? undefined : { value: 'Sortie', position: 'insideTopLeft', fill: '#CC0000', fontSize: 8 }}
-                />
-              )}
-
-              <Line
-                type="monotone"
-                dataKey="prix"
-                stroke="#FFCB05"
-                strokeWidth={2}
-                dot={{ r: 3, fill: '#FFCB05', strokeWidth: 0 }}
-                activeDot={{ r: 5, fill: '#FFCB05', strokeWidth: 0 }}
-                isAnimationActive={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        )}
-      </div>
-
-      {/* Sélecteur de source (CM maintenant, eBay à venir) */}
-      <div className="flex items-center gap-2 px-1">
-        <span className="text-[10px] text-gray-600">Source :</span>
-        <div className="flex bg-gray-800 rounded-lg p-0.5 gap-0.5">
-          {SOURCES.map((s) => (
-            <button
-              key={s.key}
-              disabled={!s.dispo}
-              onClick={() => s.dispo && setSource(s.key)}
-              title={s.dispo ? undefined : 'Bientôt disponible'}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                source === s.key
-                  ? 'bg-pokemon-yellow text-gray-900'
-                  : s.dispo
-                    ? 'text-gray-400 hover:text-white'
-                    : 'text-gray-600 cursor-not-allowed'
-              }`}
-            >
-              {s.label}{!s.dispo && ' · bientôt'}
-            </button>
-          ))}
         </div>
       </div>
     </div>
