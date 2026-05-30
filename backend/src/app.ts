@@ -1,9 +1,15 @@
 import express from 'express'
 import cors from 'cors'
 import 'dotenv/config'
+import listEndpoints from 'express-list-endpoints'
+import swaggerUi from 'swagger-ui-express'
+import { openapiSpec } from './docs/openapi'
 
 import etbsRouter from './routes/etbs'
 import prixRouter from './routes/prix'
+import authRouter from './routes/auth'
+import vaultRouter from './routes/vault'
+import adminRouter from './routes/admin'
 
 const app = express()
 app.use(cors())
@@ -11,6 +17,21 @@ app.use(express.json())
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 
+// Documentation interactive Swagger UI — http://localhost:3001/api/docs
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec, { customSiteTitle: 'ETBVault API' }))
+app.get('/api/openapi.json', (_req, res) => res.json(openapiSpec))
+
+// GET /api/routes — liste toutes les routes enregistrées (introspection dev)
+app.get('/api/routes', (_req, res) => {
+  const routes = listEndpoints(app)
+    .map((e) => ({ path: e.path, methods: e.methods }))
+    .sort((a, b) => a.path.localeCompare(b.path))
+  res.json({ total: routes.length, routes })
+})
+
+app.use('/api/auth', authRouter)
+app.use('/api/vault', vaultRouter)
+app.use('/api/admin', adminRouter)
 app.use('/api/etbs', etbsRouter)
 app.use('/api/etbs/:id/prix', prixRouter)
 
@@ -118,22 +139,6 @@ app.get('/api/sparklines', async (req, res) => {
     res.json(map)
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : 'Erreur serveur' })
-  }
-})
-
-// POST /api/admin/refresh — déclenche manuellement les deux mises à jour
-// ETB (Cardmarket) + cartes (TCGdex) — upsert, sans doublon
-app.post('/api/admin/refresh', async (_req, res) => {
-  const { mettreAJourPrixDepuisCM } = await import('./services/cm-download')
-  const { mettreAJourPrixCartes } = await import('./cron/prix-cartes')
-  try {
-    console.log('[admin/refresh] Lancement mise à jour ETB...')
-    const { ok, sans_prix } = await mettreAJourPrixDepuisCM()
-    console.log('[admin/refresh] Lancement mise à jour cartes...')
-    await mettreAJourPrixCartes()
-    res.json({ success: true, etbMisAJour: ok, etbSansPrix: sans_prix })
-  } catch (e) {
-    res.status(500).json({ success: false, error: e instanceof Error ? e.message : 'Erreur' })
   }
 })
 
