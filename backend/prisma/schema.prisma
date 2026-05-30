@@ -16,12 +16,12 @@ enum Role {
 // ajoutés au catalogue (displays, booster boxes, coffrets, tins, premium, blisters).
 enum ProduitType {
   ETB
-  DISPLAY
-  BOOSTER_BOX
-  COFFRET
-  TIN
-  PREMIUM
-  BLISTER
+  DISPLAY   // booster box / display (CM cat 53)
+  BOOSTER   // booster à l'unité (CM cat 52)
+  COFFRET   // box set non-premium (CM cat 1015)
+  PREMIUM   // premium collection (CM cat 1015, nom « Premium Collection »)
+  TIN       // CM cat 1014
+  BLISTER   // CM cat 1083
   AUTRE
 }
 
