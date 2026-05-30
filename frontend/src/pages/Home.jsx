@@ -5,6 +5,8 @@ import { detecterMouvement } from '../utils/mouvement'
 import { eur0 } from '../utils/format'
 import { Icon } from '../components/Icon'
 import Sparkline from '../components/Sparkline'
+import VaultHomeCard from '../components/VaultHomeCard'
+import { useAuth } from '../context/AuthContext'
 import { BoxArt, MovementBadge, Price, VarNum, Segmented, Ticker, KPI, EraTag } from '../components/ui'
 
 const PERIODES = [
@@ -90,6 +92,7 @@ function TrendRow({ etb, rang, periode, go }) {
 export default function Home() {
   const navigate = useNavigate()
   const go = (p) => navigate(p)
+  const { user } = useAuth()
   const [etbs, setEtbs] = useState([])
   const [periode, setPeriode] = useState(7)
   const [tendances, setTendances] = useState([])
@@ -166,6 +169,9 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* ── MON VAULT (mis en avant, connecté uniquement) ── */}
+        {user && <VaultHomeCard />}
 
         {/* ── TENDANCES ── */}
         <section className="mx-auto" style={{ maxWidth: 1180, padding: 'clamp(28px,4vw,52px) clamp(18px,4vw,40px)' }}>
