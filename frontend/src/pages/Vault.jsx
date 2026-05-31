@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useVault } from '../hooks/useVault'
+import { useAuth } from '../context/AuthContext'
 import { fetchETBs, fetchPrixActuels } from '../services/api'
 import { eur, eur0, pct } from '../utils/format'
 import { Icon } from '../components/Icon'
@@ -11,6 +12,7 @@ const PALETTE = ['var(--accent)', 'var(--up)', 'var(--new)', 'oklch(0.7 0.13 320
 export default function Vault() {
   const navigate = useNavigate()
   const go = (p) => navigate(p)
+  const { user } = useAuth()
   const { entries, addEntry, removeEntry } = useVault()
   const [etbs, setEtbs] = useState([])
   const [prixActuels, setPrixActuels] = useState({})
@@ -67,6 +69,13 @@ export default function Vault() {
       </section>
 
       <section className="mx-auto flex flex-col" style={{ maxWidth: 1000, padding: '0 clamp(18px,4vw,40px) 60px', gap: 18 }}>
+        {/* Coffre local (déconnecté) : incite à créer un compte */}
+        {!user && (
+          <div className="card flex flex-wrap items-center justify-between gap-3" style={{ padding: '12px 16px', borderColor: 'var(--border-2)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-2)' }}>💾 Coffre enregistré <strong>sur cet appareil</strong> — crée un compte pour le sauvegarder et le retrouver partout.</span>
+            <button className="btn btn-accent shrink-0" style={{ padding: '8px 14px', fontSize: 13 }} onClick={() => go('/connexion')}>Créer un compte</button>
+          </div>
+        )}
         {/* P&L */}
         <div className="card" style={{ padding: 'clamp(20px,3vw,30px)' }}>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
