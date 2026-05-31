@@ -87,14 +87,14 @@ export default function Vault() {
             <div className="mt-6">
               <div className="flex w-full overflow-hidden" style={{ height: 10, borderRadius: 999, gap: 2 }}>
                 {alloc.map((r, i) => (
-                  <div key={r.id} title={`${r.etb?.nom}: ${eur0(r.valeur)}`} style={{ width: `${(r.valeur / totVal) * 100}%`, background: PALETTE[i % PALETTE.length], borderRadius: 3 }} />
+                  <div key={r.id} title={`${r.etb?.nomFr ?? r.etb?.nom}: ${eur0(r.valeur)}`} style={{ width: `${(r.valeur / totVal) * 100}%`, background: PALETTE[i % PALETTE.length], borderRadius: 3 }} />
                 ))}
               </div>
               <div className="flex flex-wrap gap-x-5 gap-y-1.5 mt-3">
                 {alloc.slice(0, 5).map((r, i) => (
                   <span key={r.id} className="flex items-center gap-1.5" style={{ fontSize: 11.5, color: 'var(--muted)' }}>
                     <span style={{ width: 8, height: 8, borderRadius: 2, background: PALETTE[i % PALETTE.length] }} />
-                    {r.etb?.nom ?? r.etbId} <span className="font-mono" style={{ color: 'var(--faint)' }}>{Math.round((r.valeur / totVal) * 100)}%</span>
+                    {r.etb?.nomFr ?? r.etb?.nom ?? r.etbId} <span className="font-mono" style={{ color: 'var(--faint)' }}>{Math.round((r.valeur / totVal) * 100)}%</span>
                   </span>
                 ))}
               </div>
@@ -110,7 +110,7 @@ export default function Vault() {
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>ETB</span>
                 <select value={draft.etbId} onChange={(e) => setDraft({ ...draft, etbId: e.target.value })} required className="field" style={{ appearance: 'none' }}>
                   <option value="" disabled>Choisir une ETB…</option>
-                  {etbs.map((e) => <option key={e.id} value={e.id}>{e.nom} — {e.era}</option>)}
+                  {etbs.map((e) => <option key={e.id} value={e.id}>{e.nomFr ?? e.nom} — {e.era}</option>)}
                 </select>
               </label>
               <div className="grid grid-cols-2 gap-4">
@@ -149,7 +149,7 @@ export default function Vault() {
                   {r.etb ? <BoxArt etb={r.etb} style={{ height: 38, width: 50 }} /> : <span className="font-mono" style={{ fontSize: 9, color: 'var(--faint)' }}>{r.etbId}</span>}
                 </button>
                 <div className="min-w-0 flex-1">
-                  <button className="text-left truncate block w-full" style={{ fontSize: 14, fontWeight: 560 }} onClick={() => r.etb && go(`/produit/${r.etbId}`)}>{r.etb?.nom ?? r.etbId}</button>
+                  <button className="text-left truncate block w-full" style={{ fontSize: 14, fontWeight: 560 }} onClick={() => r.etb && go(`/produit/${r.etbId}`)}>{r.etb?.nomFr ?? r.etb?.nom ?? r.etbId}</button>
                   <div className="font-mono" style={{ fontSize: 11.5, color: 'var(--faint)', marginTop: 2 }}>
                     {r.quantite > 1 ? `${r.quantite} × ` : ''}{eur(r.prixAchat)} · {r.dateAchat}
                   </div>
