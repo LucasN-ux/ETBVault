@@ -2,10 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useVault } from '../hooks/useVault'
 import { useAuth } from '../context/AuthContext'
-import { fetchETBs, fetchPrixActuels } from '../services/api'
+import { fetchETBs, fetchPrixActuels, fetchPrixHistoriqueMultiple } from '../services/api'
 import { eur, eur0, pct } from '../utils/format'
+import { valeurHistorique } from '../utils/valeurHistorique'
+import { partagerCoffre } from '../utils/imagePartage'
 import { Icon } from '../components/Icon'
 import { BoxArt, KPI } from '../components/ui'
+import VaultValueChart from '../components/VaultValueChart'
 
 const PALETTE = ['var(--accent)', 'var(--up)', 'var(--new)', 'oklch(0.7 0.13 320)', 'oklch(0.75 0.12 60)', 'var(--muted)']
 
@@ -18,11 +21,32 @@ export default function Vault() {
   const [prixActuels, setPrixActuels] = useState({})
   const [formOpen, setFormOpen] = useState(false)
   const [draft, setDraft] = useState({ etbId: '', prixAchat: '', quantite: 1 })
+  const [hist, setHist] = useState({})
+  const [partageEtat, setPartageEtat] = useState('idle') // idle | partagé | téléchargée
 
   useEffect(() => {
     fetchETBs().then(setEtbs).catch(() => {})
     fetchPrixActuels().then(setPrixActuels).catch(() => {})
   }, [])
+
+  // Historique de prix des produits détenus → série de valeur du coffre
+  useEffect(() => {
+    const ids = [...new Set(entries.map((e) => e.etbId))]
+    if (!ids.length) { setHist({}); return }
+    fetchPrixHistoriqueMultiple(ids).then((h) => {
+      const norm = {}
+      for (const [k, v] of Object.entries(h)) norm[k] = (v ?? []).map((p) => ({ date: String(p.date).slice(0, 10), cmPrixMoyen: p.cmPrixMoyen }))
+      setHist(norm)
+    }).catch(() => {})
+  }, [entries])
+
+  const serie = useMemo(
+    () => valeurHistorique(
+      entries.map((e) => ({ etbId: e.etbId, prixAchat: Number(e.prixAchat), quantite: e.quantite || 1, dateAchat: String(e.dateAchat).slice(0, 10) })),
+      hist,
+    ),
+    [entries, hist],
+  )
 
   const etbMap = useMemo(() => Object.fromEntries(etbs.map((e) => [e.id, e])), [etbs])
 
@@ -49,6 +73,11 @@ export default function Vault() {
     setFormOpen(false)
   }
 
+  async function partager() {
+    const r = await partagerCoffre({ valeur: totVal, plPct, positive, serie })
+    if (r === 'telechargement') { setPartageEtat('téléchargée'); setTimeout(() => setPartageEtat('idle'), 4000) }
+  }
+
   return (
     <div style={{ position: 'relative', zIndex: 1 }}>
       <section className="mx-auto" style={{ maxWidth: 1000, padding: 'clamp(24px,4vw,44px) clamp(18px,4vw,40px) 0' }}>
@@ -59,7 +88,7 @@ export default function Vault() {
               <h1 className="display" style={{ fontSize: 'clamp(26px,3vw,36px)' }}>Mon Vault</h1>
             </div>
             <p style={{ fontSize: 13.5, color: 'var(--muted)' }}>
-              {entries.length} position{entries.length > 1 ? 's' : ''} · stockage local · valeurs au prix marché Cardmarket
+              {entries.length} position{entries.length > 1 ? 's' : ''} · {user ? 'synchronisé sur ton compte' : 'stockage local'} · valeurs au prix marché Cardmarket
             </p>
           </div>
           <button className="btn btn-accent" style={{ padding: '12px 20px', fontSize: 14.5 }} onClick={() => setFormOpen((v) => !v)}>
@@ -78,11 +107,24 @@ export default function Vault() {
         )}
         {/* P&L */}
         <div className="card" style={{ padding: 'clamp(20px,3vw,30px)' }}>
+          {rows.length > 0 && (
+            <div className="flex justify-end mb-2">
+              <button onClick={partager} className="btn btn-ghost" style={{ padding: '8px 14px', fontSize: 13 }} title="Partager une image de ton coffre (valeur et % uniquement)">
+                <Icon name="external" size={15} /> {partageEtat === 'téléchargée' ? 'Image téléchargée ✓' : 'Partager'}
+              </button>
+            </div>
+          )}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
             <KPI label="Investi" value={eur0(totInvest)} />
             <KPI label="Valeur estimée" value={eur0(totVal)} sub="prix marché CM" />
             <KPI label="Plus-value latente" value={(positive ? '+' : '') + eur0(pl)} sub={pct(plPct)} subColor={positive ? 'var(--up)' : 'var(--down)'} />
           </div>
+          {serie.length >= 2 && (
+            <div className="mt-6">
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Valeur du coffre dans le temps</div>
+              <VaultValueChart data={serie} height={220} />
+            </div>
+          )}
           {rows.length > 0 && totVal > 0 && (
             <div className="mt-6">
               <div className="flex w-full overflow-hidden" style={{ height: 10, borderRadius: 999, gap: 2 }}>
