@@ -41,7 +41,7 @@ function CatCard({ etb, go }) {
       </div>
       <div className="flex flex-col" style={{ padding: '12px 14px 14px', borderTop: '1px solid var(--border)', gap: 6 }}>
         <div>
-          <div className="truncate" style={{ fontSize: 14, fontWeight: 580 }}>{etb.nom}</div>
+          <div className="truncate" style={{ fontSize: 14, fontWeight: 580 }}>{etb.nomFr ?? etb.nom}</div>
           <EraTag>{etb.type && etb.type !== 'ETB' ? (TYPE_LABEL[etb.type] ?? etb.type) : `${etb.era ?? ''}${etb.annee ? ` · ${etb.annee}` : ''}`}</EraTag>
         </div>
         <div className="flex items-end justify-between mt-1">
@@ -108,15 +108,15 @@ export default function Catalogue() {
     else if (era !== 'Toutes') list = list.filter((e) => e.era === era)
     if (q.trim()) {
       const s = q.toLowerCase()
-      list = list.filter((e) => e.nom.toLowerCase().includes(s) || e.id.includes(s))
+      list = list.filter((e) => [e.nomFr, e.nom, e.id].some((x) => x && String(x).toLowerCase().includes(s)))
     }
     if (tri === 'date') list.sort((a, b) => {
       const d = new Date(b.dateSortie ?? b.date_sortie ?? 0) - new Date(a.dateSortie ?? a.date_sortie ?? 0)
-      return d !== 0 ? d : a.nom.localeCompare(b.nom, 'fr')
+      return d !== 0 ? d : (a.nomFr ?? a.nom).localeCompare(b.nomFr ?? b.nom, 'fr')
     })
     else if (tri === 'prix') list.sort((a, b) => (b.prixActuel ?? 0) - (a.prixActuel ?? 0))
     else if (tri === 'var') list.sort((a, b) => (b.v30 ?? -999) - (a.v30 ?? -999))
-    else list.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
+    else list.sort((a, b) => (a.nomFr ?? a.nom).localeCompare(b.nomFr ?? b.nom, 'fr'))
     return list
   }, [enrichies, era, q, tri])
 

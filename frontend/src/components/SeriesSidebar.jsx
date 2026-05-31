@@ -20,7 +20,7 @@ function ETBLink({ etb, active, onClick }) {
     ? { ...base, background: 'var(--accent-soft)', color: 'var(--text)', fontWeight: 560, boxShadow: 'inset 2px 0 0 var(--accent)' }
     : base
   return (
-    <button onClick={onClick} className={active ? '' : 'btn-quiet'} style={activeStyle} title={etb.nom}>
+    <button onClick={onClick} className={active ? '' : 'btn-quiet'} style={activeStyle} title={etb.nomFr ?? etb.nom}>
       <span style={{ width: 40, height: 28, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 6, background: 'var(--surface-2)', overflow: 'hidden' }}>
         {img ? (
           <img src={img} alt="" loading="lazy" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
@@ -28,7 +28,7 @@ function ETBLink({ etb, active, onClick }) {
           <span className="font-mono" style={{ fontSize: 8, color: 'var(--faint)' }}>{etb.id}</span>
         )}
       </span>
-      <span className="truncate">{etb.nom}</span>
+      <span className="truncate">{etb.nomFr ?? etb.nom}</span>
     </button>
   )
 }
@@ -65,7 +65,7 @@ export default function SeriesSidebar({ isOpen, onClose, currentId, type = 'ETB'
   const filtered = useMemo(() => {
     if (!q.trim()) return null
     const s = q.toLowerCase()
-    return etbs.filter((e) => e.nom.toLowerCase().includes(s) || String(e.id).includes(s))
+    return etbs.filter((e) => [e.nomFr, e.nom, e.id].some((x) => x && String(x).toLowerCase().includes(s)))
   }, [etbs, q])
 
   function go(id) {

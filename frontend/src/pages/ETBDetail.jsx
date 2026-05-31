@@ -105,7 +105,10 @@ export default function ETBDetail() {
   }
 
   const cmUrl = etb.cmUrl ?? etb.cm_url
-  const lienCardmarket = cmUrl || `https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString=${encodeURIComponent(`${etb.nom} Elite Trainer Box`)}`
+  const cmId = etb.cmIdProducts?.[0]
+  const lienCardmarket = cmId
+    ? `https://www.cardmarket.com/fr/Pokemon/Products?idProduct=${cmId}`
+    : (cmUrl || `https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString=${encodeURIComponent(etb.nom)}`)
 
   return (
     <div className="lg:flex" style={{ position: 'relative', zIndex: 1 }}>
@@ -129,7 +132,7 @@ export default function ETBDetail() {
         <Icon name="chevron" size={13} />
         <button onClick={() => go('/catalogue')} style={{ background: 'none', border: 0, color: 'inherit', cursor: 'pointer' }}>Catalogue</button>
         <Icon name="chevron" size={13} />
-        <span className="truncate" style={{ color: 'var(--text-2)', maxWidth: 200 }}>{etb.nom}</span>
+        <span className="truncate" style={{ color: 'var(--text-2)', maxWidth: 200 }}>{etb.nomFr ?? etb.nom}</span>
       </div>
 
       {/* header */}
@@ -157,7 +160,7 @@ export default function ETBDetail() {
           <div className="mt-8 lg:mt-0 flex flex-col" style={{ gap: 18 }}>
             <div>
               <EraTag>{etb.era} · {dateFr(etb.dateSortie ?? etb.date_sortie)}</EraTag>
-              <h1 className="display" style={{ fontSize: 'clamp(26px,3vw,38px)', margin: '6px 0 14px' }}>{etb.nom}</h1>
+              <h1 className="display" style={{ fontSize: 'clamp(26px,3vw,38px)', margin: '6px 0 14px' }}>{etb.nomFr ?? etb.nom}</h1>
               <div className="flex flex-wrap items-end" style={{ gap: 'clamp(20px,4vw,40px)' }}>
                 <div>
                   <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 4 }}>Prix marché</div>
