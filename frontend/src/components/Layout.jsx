@@ -121,10 +121,31 @@ function Footer() {
   )
 }
 
+// Bandeau de fusion : proposé quand on se connecte à un compte qui a DÉJÀ des
+// positions alors qu'un coffre local existe (cf. stratégie C dans AuthContext).
+function ImportBanner() {
+  const { pendingImport, confirmImport, dismissImport } = useAuth()
+  if (!pendingImport) return null
+  return (
+    <div style={{ background: 'var(--accent-soft)', borderBottom: '1px solid var(--border)' }}>
+      <div className="mx-auto flex flex-wrap items-center justify-between gap-3" style={{ maxWidth: 1180, padding: '10px clamp(16px,4vw,40px)' }}>
+        <span style={{ fontSize: 13, color: 'var(--text)' }}>
+          Tu as <strong>{pendingImport}</strong> produit{pendingImport > 1 ? 's' : ''} dans ton coffre local — les ajouter à ton compte ?
+        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          <button className="btn btn-accent" style={{ padding: '7px 13px', fontSize: 13 }} onClick={confirmImport}>Importer</button>
+          <button className="btn btn-quiet" style={{ padding: '7px 12px', fontSize: 13 }} onClick={dismissImport}>Ignorer</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Layout() {
   return (
     <div className="etbv-root" data-theme="vault" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Nav />
+      <ImportBanner />
       <main style={{ flex: 1 }}>
         <Outlet />
       </main>

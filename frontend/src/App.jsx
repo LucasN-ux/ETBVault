@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
-import { ProtectedRoute, AdminRoute } from './components/Guards'
+import { AdminRoute } from './components/Guards'
 import Layout from './components/Layout'
 import Home from './pages/Home'
 import Catalogue from './pages/Catalogue'
@@ -20,8 +20,8 @@ export default function App() {
             <Route path="/produit/:id" element={<ETBDetail />} />
             <Route path="/etb/:id" element={<ETBDetail />} />{/* alias rétro-compat */}
             <Route path="/connexion" element={<Connexion />} />
-            <Route path="/vault" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
-            <Route path="/portfolio" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
+            <Route path="/vault" element={<Vault />} />
+            <Route path="/portfolio" element={<Vault />} />
             <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
           </Route>
         </Routes>

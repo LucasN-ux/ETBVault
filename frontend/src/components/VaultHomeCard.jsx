@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useVault } from '../hooks/useVault'
+import { useAuth } from '../context/AuthContext'
 import { fetchETBs, fetchPrixActuels } from '../services/api'
 import { eur0, pct } from '../utils/format'
 import { Icon } from './Icon'
 import { BoxArt, KPI } from './ui'
 
-// Bloc « Mon Vault » mis en avant sur la Home — affiché uniquement connecté
-// (la Home le monte derrière une garde). S'adapte : coffre rempli = résumé P&L,
-// coffre vide = invitation.
+// Bloc « Mon Vault » mis en avant sur la Home. Affiché à tous : coffre local
+// si déconnecté, coffre du compte si connecté. S'adapte : rempli = résumé P&L,
+// vide = invitation. Incite à créer un compte quand le coffre est local.
 
 const PALETTE = ['var(--accent)', 'var(--up)', 'var(--new)', 'oklch(0.7 0.13 320)', 'oklch(0.75 0.12 60)', 'var(--muted)']
 
@@ -22,6 +23,7 @@ function Section({ children }) {
 
 export default function VaultHomeCard() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { entries, loading } = useVault()
   const [etbs, setEtbs] = useState([])
   const [prixActuels, setPrixActuels] = useState({})
@@ -78,6 +80,11 @@ export default function VaultHomeCard() {
             <Icon name="vault" size={20} style={{ color: 'var(--accent)' }} />
             <h2 className="display" style={{ fontSize: 20 }}>Mon Vault</h2>
             <span className="font-mono" style={{ fontSize: 12, color: 'var(--faint)' }}>{rows.length} position{rows.length > 1 ? 's' : ''}</span>
+            {!user && (
+              <button onClick={() => navigate('/connexion')} className="ulink" style={{ fontSize: 11.5 }} title="Crée un compte pour sauvegarder ton coffre sur tous tes appareils">
+                · coffre local · sauvegarder
+              </button>
+            )}
           </div>
           <button onClick={() => navigate('/vault')} className="ulink inline-flex items-center gap-1.5" style={{ fontSize: 13.5 }}>
             Ouvrir <Icon name="arrowRight" size={15} />
