@@ -188,8 +188,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── MON VAULT (mis en avant, connecté uniquement) ── */}
-        {user && <VaultHomeCard />}
+        {/* ── MON VAULT (mis en avant, coffre local si déconnecté) ── */}
+        <VaultHomeCard />
 
         {/* ── TENDANCES ── */}
         <section className="mx-auto" style={{ maxWidth: 1180, padding: 'clamp(28px,4vw,52px) clamp(18px,4vw,40px)' }}>
