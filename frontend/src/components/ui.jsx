@@ -21,7 +21,7 @@ export function BoxArt({ etb, className = '', style }) {
     return (
       <img
         src={img}
-        alt={etb?.nom}
+        alt={etb?.nomFr ?? etb?.nom}
         className={'zoomable ' + className}
         style={{ objectFit: 'contain', ...style }}
         loading="lazy"
@@ -54,7 +54,7 @@ export function BoxArt({ etb, className = '', style }) {
       <div style={{ position: 'absolute', inset: 0, opacity: 0.5, backgroundImage: 'repeating-linear-gradient(60deg, oklch(1 0 0 / 0.05) 0 2px, transparent 2px 9px)' }} />
       <div style={{ position: 'relative' }}>
         <div className="display" style={{ fontSize: 'clamp(13px, 3.5cqw, 20px)', color: '#fff', lineHeight: 1, fontWeight: 700, textShadow: '0 1px 8px oklch(0 0 0 / 0.5)' }}>
-          {etb?.nom}
+          {etb?.nomFr ?? etb?.nom}
         </div>
         <div className="font-mono" style={{ fontSize: 8.5, letterSpacing: '0.12em', color: 'oklch(1 0 0 / 0.75)', marginTop: 4, textTransform: 'uppercase' }}>
           {TYPE_PLACEHOLDER[etb?.type] ?? 'Produit scellé'}

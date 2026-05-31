@@ -101,7 +101,7 @@ export default function VaultHomeCard() {
           <>
             <div className="flex w-full overflow-hidden mt-6" style={{ height: 10, borderRadius: 999, gap: 2 }}>
               {alloc.map((r, i) => (
-                <div key={r.id} title={`${r.etb?.nom ?? r.etbId} : ${eur0(r.valeur)}`} style={{ width: `${(r.valeur / totVal) * 100}%`, background: PALETTE[i % PALETTE.length], borderRadius: 3 }} />
+                <div key={r.id} title={`${r.etb?.nomFr ?? r.etb?.nom ?? r.etbId} : ${eur0(r.valeur)}`} style={{ width: `${(r.valeur / totVal) * 100}%`, background: PALETTE[i % PALETTE.length], borderRadius: 3 }} />
               ))}
             </div>
 
@@ -112,7 +112,7 @@ export default function VaultHomeCard() {
                     {r.etb ? <BoxArt etb={r.etb} style={{ height: 28, width: 38 }} /> : <span className="font-mono" style={{ fontSize: 8, color: 'var(--faint)' }}>{r.etbId}</span>}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate" style={{ fontSize: 12.5, fontWeight: 560 }}>{r.etb?.nom ?? r.etbId}</div>
+                    <div className="truncate" style={{ fontSize: 12.5, fontWeight: 560 }}>{r.etb?.nomFr ?? r.etb?.nom ?? r.etbId}</div>
                     <div className="font-mono" style={{ fontSize: 11.5, fontWeight: 600, color: r.pl >= 0 ? 'var(--up)' : 'var(--down)' }}>
                       {r.pl >= 0 ? '+' : ''}{eur0(r.pl)}
                     </div>

@@ -43,7 +43,8 @@ model User {
 // le modèle est désormais générique. Les 66 ETB existants ont type = ETB par défaut.
 model Produit {
   id             String           @id
-  nom            String
+  nom            String                                  // nom exact Cardmarket (EN) — lien CM, i18n future
+  nomFr          String?          @map("nom_fr")         // nom d'affichage FR (TCGdex)
   type           ProduitType      @default(ETB)
   setId          String?          @map("set_id")          // set d'appartenance (TCGdex), nullable
   era            String?

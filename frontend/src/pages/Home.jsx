@@ -38,7 +38,7 @@ function HeroSlab({ etb, periode, go }) {
               </span>
               <EraTag>{etb.era}</EraTag>
             </div>
-            <h3 className="display" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)', marginBottom: 4 }}>{etb.nom}</h3>
+            <h3 className="display" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)', marginBottom: 4 }}>{etb.nomFr ?? etb.nom}</h3>
             <div style={{ color: 'var(--muted)', fontSize: 13 }}>Coffret Dresseur d’Élite · {etb.annee}</div>
           </div>
           <div style={{ height: 54, margin: '14px 0' }}>
@@ -73,7 +73,7 @@ function TrendRow({ etb, rang, periode, go }) {
         <BoxArt etb={etb} style={{ height: 34, width: 46 }} />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate" style={{ fontSize: 14, fontWeight: 560 }}>{etb.nom}</div>
+        <div className="truncate" style={{ fontSize: 14, fontWeight: 560 }}>{etb.nomFr ?? etb.nom}</div>
         <EraTag>{etb.era}</EraTag>
       </div>
       <div className="hidden sm:block shrink-0" style={{ width: 90, height: 30 }}>
@@ -143,7 +143,7 @@ export default function Home() {
 
   // Bande ticker : top tendances 7j
   const tickerItems = useMemo(
-    () => ranked.slice(0, 14).map((e) => ({ id: e.id, nom: e.nom, prixActuel: e.prixActuel, v7: e.variationPct })),
+    () => ranked.slice(0, 14).map((e) => ({ id: e.id, nom: e.nomFr ?? e.nom, prixActuel: e.prixActuel, v7: e.variationPct })),
     [ranked]
   )
 

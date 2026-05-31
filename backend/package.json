@@ -22,7 +22,9 @@
     "audit": "tsx src/db/audit.ts",
     "match:tcgdex": "tsx src/db/match-tcgdex.ts",
     "enrich:series": "tsx src/db/enrichir-series.ts",
-    "propager:series": "tsx src/db/propager-series.ts"
+    "propager:series": "tsx src/db/propager-series.ts",
+    "enrich:noms": "tsx src/db/enrichir-noms.ts",
+    "enrich:images": "tsx src/db/enrichir-images.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
