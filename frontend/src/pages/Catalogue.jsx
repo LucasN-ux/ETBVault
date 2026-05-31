@@ -5,8 +5,7 @@ import { detecterMouvement } from '../utils/mouvement'
 import { Icon } from '../components/Icon'
 import Sparkline from '../components/Sparkline'
 import { BoxArt, MovementBadge, Price, VarNum, SearchInput, Chip, EraTag } from '../components/ui'
-
-const ERES = ['Méga-Évolution', 'Écarlate et Violet', 'Épée et Bouclier', 'Soleil et Lune', 'XY', 'Noir et Blanc']
+import { ordonnerSeries } from '../utils/series'
 // Types de produits (filtre principal). Pas de « Tous » : le catalogue compte des milliers de produits.
 const TYPES = [
   { k: 'ETB', l: 'ETB' },
@@ -99,15 +98,22 @@ export default function Catalogue() {
     })
   }, [etbs, sparks, prixActuels])
 
+  // Séries réellement présentes dans le type courant, ordonnées récent → ancien.
+  const seriesPresentes = useMemo(() => ordonnerSeries(enrichies.map((e) => e.era)), [enrichies])
+  const aSansSerie = useMemo(() => enrichies.some((e) => !e.era), [enrichies])
+
   const filtered = useMemo(() => {
     let list = enrichies.slice()
-    if (era === 'Autres') list = list.filter((e) => !ERES.includes(e.era))
+    if (era === 'Sans série') list = list.filter((e) => !e.era)
     else if (era !== 'Toutes') list = list.filter((e) => e.era === era)
     if (q.trim()) {
       const s = q.toLowerCase()
       list = list.filter((e) => e.nom.toLowerCase().includes(s) || e.id.includes(s))
     }
-    if (tri === 'date') list.sort((a, b) => new Date(b.dateSortie ?? b.date_sortie ?? 0) - new Date(a.dateSortie ?? a.date_sortie ?? 0))
+    if (tri === 'date') list.sort((a, b) => {
+      const d = new Date(b.dateSortie ?? b.date_sortie ?? 0) - new Date(a.dateSortie ?? a.date_sortie ?? 0)
+      return d !== 0 ? d : a.nom.localeCompare(b.nom, 'fr')
+    })
     else if (tri === 'prix') list.sort((a, b) => (b.prixActuel ?? 0) - (a.prixActuel ?? 0))
     else if (tri === 'var') list.sort((a, b) => (b.v30 ?? -999) - (a.v30 ?? -999))
     else list.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
@@ -117,11 +123,11 @@ export default function Catalogue() {
   const grouped = era === 'Toutes' && tri === 'date'
   const groups = useMemo(() => {
     if (!grouped) return null
-    const g = ERES.map((er) => ({ era: er, list: filtered.filter((e) => e.era === er) })).filter((x) => x.list.length)
-    const autres = filtered.filter((e) => !ERES.includes(e.era))
-    if (autres.length) g.push({ era: 'Autres', list: autres })
+    const g = seriesPresentes.map((s) => ({ era: s, list: filtered.filter((e) => e.era === s) })).filter((x) => x.list.length)
+    const sans = filtered.filter((e) => !e.era)
+    if (sans.length) g.push({ era: 'Sans série', list: sans })
     return g
-  }, [filtered, grouped])
+  }, [filtered, grouped, seriesPresentes])
 
   return (
     <div style={{ position: 'relative', zIndex: 1 }}>
@@ -143,8 +149,8 @@ export default function Catalogue() {
           {/* Ères + tri */}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar" style={{ paddingBottom: 2 }}>
             <Chip active={era === 'Toutes'} onClick={() => setEra('Toutes')}>Toutes</Chip>
-            {ERES.map((er) => <Chip key={er} active={era === er} onClick={() => setEra(er)}>{er}</Chip>)}
-            <Chip active={era === 'Autres'} onClick={() => setEra('Autres')}>Autres</Chip>
+            {seriesPresentes.map((s) => <Chip key={s} active={era === s} onClick={() => setEra(s)}>{s}</Chip>)}
+            {aSansSerie && <Chip active={era === 'Sans série'} onClick={() => setEra('Sans série')}>Sans série</Chip>}
             <span style={{ width: 1, height: 18, background: 'var(--border-2)', margin: '0 6px', flexShrink: 0 }} />
             <span className="flex items-center shrink-0" style={{ color: 'var(--faint)' }}>
               <Icon name="sort" size={14} />
@@ -166,22 +172,30 @@ export default function Catalogue() {
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center" style={{ padding: '80px 0', gap: 12 }}>
             <Icon name="search" size={30} />
-            <p style={{ color: 'var(--muted)' }}>Aucune ETB ne correspond.</p>
+            <p style={{ color: 'var(--muted)' }}>Aucun produit ne correspond.</p>
             <button className="ulink" onClick={() => { setQ(''); setEra('Toutes') }}>Réinitialiser</button>
           </div>
         ) : grouped ? (
           <div className="flex flex-col" style={{ gap: 44 }}>
-            {groups.map((g) => (
-              <div key={g.era}>
-                <div className="flex items-baseline gap-3 mb-4">
-                  <h2 className="display" style={{ fontSize: 19 }}>{g.era}</h2>
-                  <span className="font-mono" style={{ fontSize: 12, color: 'var(--faint)' }}>{g.list.length} ETB</span>
+            {groups.map((g) => {
+              const visibles = g.list.slice(0, 18)
+              return (
+                <div key={g.era}>
+                  <div className="flex items-baseline gap-3 mb-4">
+                    <h2 className="display" style={{ fontSize: 19 }}>{g.era}</h2>
+                    <span className="font-mono" style={{ fontSize: 12, color: 'var(--faint)' }}>{g.list.length}</span>
+                  </div>
+                  <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
+                    {visibles.map((e) => <CatCard key={e.id} etb={e} go={go} />)}
+                  </div>
+                  {g.list.length > visibles.length && (
+                    <button onClick={() => setEra(g.era)} className="ulink mt-4 inline-flex items-center gap-1.5" style={{ fontSize: 13.5 }}>
+                      Voir les {g.list.length} {TYPE_LABEL[type] ?? 'produits'} · {g.era} <Icon name="arrowRight" size={15} />
+                    </button>
+                  )}
                 </div>
-                <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
-                  {g.list.map((e) => <CatCard key={e.id} etb={e} go={go} />)}
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         ) : (
           <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>

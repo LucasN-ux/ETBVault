@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchETBs, fetchTendances, fetchSparklines } from '../services/api'
+import { fetchETBs, fetchTendances, fetchSparklines, adminRefresh } from '../services/api'
 import { detecterMouvement } from '../utils/mouvement'
 import { eur0 } from '../utils/format'
 import { Icon } from '../components/Icon'
@@ -89,6 +89,23 @@ function TrendRow({ etb, rang, periode, go }) {
   )
 }
 
+// Bouton admin : relance la collecte des prix (cron CM + cartes). Réservé ADMIN.
+function RefreshButton() {
+  const [state, setState] = useState('idle') // idle | loading | ok | error
+  async function run() {
+    if (state === 'loading') return
+    setState('loading')
+    try { await adminRefresh(); setState('ok') } catch { setState('error') }
+    finally { setTimeout(() => setState('idle'), 5000) }
+  }
+  const label = { idle: 'Mettre à jour les prix', loading: 'Mise à jour…', ok: 'Prix à jour ✓', error: 'Échec — réessayer' }[state]
+  return (
+    <button onClick={run} disabled={state === 'loading'} className="btn btn-ghost" style={{ padding: '13px 22px', fontSize: 15 }} title="Relancer la collecte des prix (admin)">
+      <Icon name="refresh" size={17} className={state === 'loading' ? 'animate-spin' : ''} /> {label}
+    </button>
+  )
+}
+
 export default function Home() {
   const navigate = useNavigate()
   const go = (p) => navigate(p)
@@ -162,6 +179,7 @@ export default function Home() {
                 <button className="btn btn-ghost" style={{ padding: '13px 22px', fontSize: 15 }} onClick={() => go('/vault')}>
                   <Icon name="vault" size={17} /> Mon Vault
                 </button>
+                {user?.role === 'ADMIN' && <RefreshButton />}
               </div>
             </div>
             <div className="mt-10 lg:mt-0">

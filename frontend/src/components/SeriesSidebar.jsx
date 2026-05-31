@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchProduits } from '../services/api'
+import { ordonnerSeries } from '../utils/series'
 import { Icon } from './Icon'
 import { SearchInput } from './ui'
 
-// Navigateur de séries (rail gauche de la fiche ETB), adapté au design « vault ».
+// Navigateur de séries (rail gauche de la fiche produit), adapté au design « vault ».
 // Rail fixe sur grand écran, drawer coulissant + overlay sur mobile.
-// L'accordéon liste les ETB par ère ; l'ETB courante est surlignée.
-
-const ERES = ['Méga-Évolution', 'Écarlate et Violet', 'Épée et Bouclier', 'Soleil et Lune', 'XY', 'Noir et Blanc']
+// L'accordéon liste les produits du type courant par série ; le produit courant est surligné.
 const TYPE_LABEL = { ETB: 'ETB', DISPLAY: 'Displays', BOOSTER: 'Boosters', COFFRET: 'Coffrets', PREMIUM: 'Premium', TIN: 'Tins', BLISTER: 'Blisters', AUTRE: 'Produits' }
 
 function ETBLink({ etb, active, onClick }) {
@@ -55,7 +54,12 @@ export default function SeriesSidebar({ isOpen, onClose, currentId, type = 'ETB'
   const estOuverte = (era) => (era in expanded ? expanded[era] : era === currentEra)
 
   const grouped = useMemo(
-    () => ERES.map((era) => ({ era, list: etbs.filter((e) => e.era === era) })).filter((g) => g.list.length),
+    () => {
+      const g = ordonnerSeries(etbs.map((e) => e.era)).map((era) => ({ era, list: etbs.filter((e) => e.era === era) }))
+      const sans = etbs.filter((e) => !e.era)
+      if (sans.length) g.push({ era: 'Sans série', list: sans })
+      return g
+    },
     [etbs],
   )
   const filtered = useMemo(() => {

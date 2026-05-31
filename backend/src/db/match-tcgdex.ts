@@ -1,15 +1,12 @@
 import 'dotenv/config'
 import prisma from './client'
+import { SERIE_LABEL } from '../services/cm-series'
 
 // Apparie les produits sans setId au catalogue de sets TCGdex (par correspondance
 // du nom du set dans le nom du produit), pour récupérer setId, logo, date de sortie
-// et affiner l'ère via la série. Usage : npm run match:tcgdex
+// et la VRAIE série du set. Usage : npm run match:tcgdex
 
 const TCGDEX = 'https://api.tcgdex.net/v2/en'
-const ERA_PAR_SERIE: Record<string, string> = {
-  sv: 'Écarlate et Violet', swsh: 'Épée et Bouclier', sm: 'Soleil et Lune',
-  xy: 'XY', bw: 'Noir et Blanc', me: 'Méga-Évolution',
-}
 // Noms de sets trop courts/ambigus à ignorer pour le substring match.
 const DENY = new Set(['xy', 'ex', 'dp'])
 
@@ -42,7 +39,7 @@ async function main(): Promise<void> {
     const data: { setId: string; imageUrl?: string; dateSortie?: Date; era?: string } = { setId: set.id }
     if (set.logo) data.imageUrl = `${set.logo}.webp`
     if (d?.releaseDate) data.dateSortie = new Date(d.releaseDate)
-    const ere = d?.serie?.id ? ERA_PAR_SERIE[d.serie.id] : undefined
+    const ere = d?.serie?.id ? (SERIE_LABEL[d.serie.id] ?? d.serie.name) : undefined
     if (ere) data.era = ere
     await prisma.produit.update({ where: { id: p.id }, data })
     matched++
