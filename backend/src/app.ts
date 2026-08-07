@@ -5,6 +5,7 @@ import listEndpoints from 'express-list-endpoints'
 import swaggerUi from 'swagger-ui-express'
 
 import { openapiSpec } from './docs/openapi'
+import { config } from './lib/config'
 import { gestionnaireErreurs, routeIntrouvable } from './middleware/erreurs'
 
 import adminRouter from './routes/admin'
@@ -18,7 +19,16 @@ import vaultRouter from './routes/vault'
 // d'erreur. Toute logique métier vit dans routes/ + repositories/ + services/.
 const app = express()
 
-app.use(cors())
+// CORS restreint aux origines déclarées. Sans liste, tout est accepté : c'est
+// le confort du développement local, jamais ce qu'on veut en production —
+// l'API sert des routes authentifiées par jeton porteur.
+app.use(
+  cors(
+    config.originesAutorisees.length > 0
+      ? { origin: config.originesAutorisees, credentials: true }
+      : {},
+  ),
+)
 app.use(express.json())
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
@@ -45,9 +55,5 @@ app.use('/api/etbs/:id/prix', prixRouter)
 // Toujours en dernier, et dans cet ordre.
 app.use(routeIntrouvable)
 app.use(gestionnaireErreurs)
-
-// Planification des mises à jour quotidiennes
-import './cron/prix-cartes'
-import './cron/prix-etb'
 
 export default app

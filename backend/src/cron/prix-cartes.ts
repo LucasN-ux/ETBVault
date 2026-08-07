@@ -65,9 +65,8 @@ export async function mettreAJourPrixCartes(): Promise<void> {
   }
 }
 
-// 07:30 chaque matin — après la mise à jour des prix ETB
-cron.schedule('30 7 * * *', mettreAJourPrixCartes, {
-  timezone: 'Europe/Paris',
-})
-
-console.log('[cron] Job prix-cartes planifié (07:30 Europe/Paris)')
+/** Planifie la mise à jour quotidienne, après celle des prix ETB. */
+export function planifierPrixCartes(): void {
+  cron.schedule('30 7 * * *', mettreAJourPrixCartes, { timezone: 'Europe/Paris' })
+  console.log('[cron] prix-cartes planifié — 07:30 Europe/Paris (TCGdex)')
+}
