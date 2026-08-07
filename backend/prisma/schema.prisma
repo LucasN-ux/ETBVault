@@ -4,7 +4,13 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // Connexion applicative. En hébergement (Neon), c'est la chaîne « pooled ».
   url      = env("DATABASE_URL")
+  // Connexion directe, réservée aux migrations. Le pooler de Neon travaille en
+  // mode transaction : les instructions DDL d'une migration n'y passent pas.
+  // Prisma exige la variable dès que `directUrl` est déclaré — en local, lui
+  // donner la même valeur que DATABASE_URL.
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
