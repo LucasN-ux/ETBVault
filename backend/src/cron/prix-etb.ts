@@ -1,7 +1,7 @@
 // Cron job quotidien — mise à jour des prix ETB via le Price Guide Cardmarket
 // Stratégie : téléchargement du fichier JSON officiel CM (légal, 1 seul appel/jour)
 //   - Connexion CM avec les identifiants .env (CM_EMAIL + CM_PASSWORD)
-//   - Tourne à 02:00 heure Paris (le fichier CM est régénéré la nuit)
+//   - Planifié à 07:00 heure Paris (le fichier CM est régénéré dans la nuit)
 //   - Met à jour un point par ETB et par jour dans prix_historique
 
 import cron from 'node-cron'
@@ -17,7 +17,14 @@ export async function mettreAJourPrixETB(): Promise<void> {
   }
 }
 
-// 07:00 chaque matin — le Price Guide CM est régénéré dans la nuit
-cron.schedule('0 7 * * *', mettreAJourPrixETB, { timezone: 'Europe/Paris' })
-
-console.log('[cron] Job prix-etb planifié (07:00 Europe/Paris) — CM Price Guide')
+/**
+ * Planifie la collecte quotidienne — appelée explicitement par le serveur.
+ *
+ * Volontairement pas un effet de bord à l'import : `app.ts` importe ce module,
+ * et tout ce qui importe l'app (script, test) planifiait donc des tâches sans
+ * le vouloir.
+ */
+export function planifierPrixETB(): void {
+  cron.schedule('0 7 * * *', mettreAJourPrixETB, { timezone: 'Europe/Paris' })
+  console.log('[cron] prix-etb planifié — 07:00 Europe/Paris (Price Guide CM)')
+}

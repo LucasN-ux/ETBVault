@@ -1,0 +1,44 @@
+# Déploiement de l'API sur Render (Blueprint).
+#
+# La base n'est pas déclarée ici : elle est hébergée sur Neon. Renseigner
+# DATABASE_URL avec la chaîne « pooled » du projet Neon.
+#
+# Les valeurs marquées sync: false ne sont pas versionnées — Render les demande
+# à la création du service, ou elles se saisissent dans son onglet Environment.
+
+services:
+  - type: web
+    name: etbvault-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    region: frankfurt
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      # ── Secrets, à saisir dans Render ────────────────────────────────────
+      - key: DATABASE_URL
+        sync: false # chaîne Neon, avec ?sslmode=require
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: CM_EMAIL
+        sync: false
+      - key: CM_PASSWORD
+        sync: false
+
+      # ── Origines autorisées à appeler l'API ──────────────────────────────
+      # À remplacer par le domaine Vercel réel une fois le front déployé.
+      - key: ORIGINES_AUTORISEES
+        sync: false
+
+      # ── Collecte des prix ────────────────────────────────────────────────
+      # Le plan gratuit met le service en veille après inactivité : les tâches
+      # planifiées dans le processus ne partiraient pas de façon fiable, et un
+      # réveil relancerait une connexion Cardmarket. Les deux sont donc coupés,
+      # et la collecte se déclenche par POST /api/admin/refresh.
+      - key: CRONS_ACTIFS
+        value: 'false'
+      - key: COLLECTE_AU_DEMARRAGE
+        value: 'false'
