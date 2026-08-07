@@ -19,7 +19,7 @@ async function main(): Promise<void> {
     .filter((s) => s.name && s.name.length >= 3 && !DENY.has(s.name.toLowerCase()))
     .sort((a, b) => b.name.length - a.name.length) // plus longue correspondance d'abord
 
-  const produits = await prisma.produit.findMany({ where: { setId: null }, select: { id: true, nom: true } })
+  const produits = await prisma.etb.findMany({ where: { setId: null }, select: { id: true, nom: true } })
   console.log(`[match:tcgdex] ${produits.length} produits sans setId · ${cands.length} sets candidats`)
 
   const detailCache = new Map<string, SetDetail | null>()
@@ -41,7 +41,7 @@ async function main(): Promise<void> {
     if (d?.releaseDate) data.dateSortie = new Date(d.releaseDate)
     const ere = d?.serie?.id ? (SERIE_LABEL[d.serie.id] ?? d.serie.name) : undefined
     if (ere) data.era = ere
-    await prisma.produit.update({ where: { id: p.id }, data })
+    await prisma.etb.update({ where: { id: p.id }, data })
     matched++
   }
   console.log(`[match:tcgdex] ${matched}/${produits.length} produits appariés (setId + logo + date + série)`)

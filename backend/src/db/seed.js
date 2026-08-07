@@ -174,7 +174,7 @@ async function seed() {
 
   for (const etb of ETBS) {
     const cmUrl = CM_ETBS[etb.id] ?? null
-    await prisma.produit.upsert({
+    await prisma.etb.upsert({
       where: { id: etb.id },
       update: {
         nom: etb.nom,

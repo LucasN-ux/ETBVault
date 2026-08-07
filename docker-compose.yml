@@ -1,0 +1,23 @@
+# Base Postgres de développement local.
+#   docker compose up -d     → démarre la base sur localhost:5432
+#   docker compose down      → arrête (les données restent dans le volume)
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: etbvault-db
+    environment:
+      POSTGRES_USER: etbvault
+      POSTGRES_PASSWORD: etbvault
+      POSTGRES_DB: etbvault
+    ports:
+      - '5432:5432'
+    volumes:
+      - etbvault-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U etbvault -d etbvault']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  etbvault-pgdata:

@@ -8,7 +8,7 @@ import { ETB_PRODUCT_IDS } from '../services/cm-products'
 async function main(): Promise<void> {
   let n = 0
   for (const [id, ids] of Object.entries(ETB_PRODUCT_IDS)) {
-    const r = await prisma.produit.updateMany({ where: { id }, data: { cmIdProducts: ids } })
+    const r = await prisma.etb.updateMany({ where: { id }, data: { cmIdProducts: ids } })
     n += r.count
   }
   console.log(`[backfill] cmIdProducts renseignés pour ${n} ETB curés`)
