@@ -12,8 +12,16 @@ doivent transiter ailleurs que par les interfaces des plateformes.
 ## 1. Neon — base de données
 
 1. Créer un projet, région **Europe (Frankfurt)** pour être proche de Render.
-2. Copier la chaîne de connexion **pooled** (celle qui contient `-pooler`), en
-   gardant `?sslmode=require`.
+2. Récupérer **deux** chaînes de connexion, toutes deux avec `?sslmode=require` :
+
+   | Variable | Chaîne Neon | Rôle |
+   |---|---|---|
+   | `DATABASE_URL` | **pooled** — l'hôte contient `-pooler` | requêtes de l'application |
+   | `DIRECT_URL` | la même **sans** `-pooler` | migrations uniquement |
+
+   Les deux sont nécessaires. Le pooler de Neon travaille en mode transaction
+   et ne laisse pas passer les instructions DDL d'une migration ; Prisma refuse
+   d'ailleurs de démarrer si `DIRECT_URL` manque.
 
 Le schéma n'est pas à créer à la main : le conteneur applique
 `prisma migrate deploy` à chaque démarrage, et la migration `0_init` crée les

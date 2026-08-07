@@ -18,7 +18,9 @@ services:
     envVars:
       # ── Secrets, à saisir dans Render ────────────────────────────────────
       - key: DATABASE_URL
-        sync: false # chaîne Neon, avec ?sslmode=require
+        sync: false # Neon, chaîne « pooled » (hôte en -pooler)
+      - key: DIRECT_URL
+        sync: false # Neon, la même SANS -pooler — sert aux migrations
       - key: JWT_SECRET
         generateValue: true
       - key: ADMIN_EMAIL
