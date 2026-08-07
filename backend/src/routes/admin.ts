@@ -1,33 +1,37 @@
 import { Router } from 'express'
 import prisma from '../db/client'
+import { routeAsync } from '../lib/route-async'
 import { requireAdmin } from '../middleware/auth'
+import { mettreAJourPrixCartes } from '../cron/prix-cartes'
+import { mettreAJourPrixDepuisCM } from '../services/cm-download'
 
-// Routes d'administration : toutes réservées au rôle ADMIN.
+// Administration : tout le routeur est réservé au rôle ADMIN.
 const router = Router()
 router.use(requireAdmin)
 
-// POST /api/admin/refresh — relance les mises à jour de prix ETB (CM) + cartes (TCGdex)
-router.post('/refresh', async (_req, res) => {
-  const { mettreAJourPrixDepuisCM } = await import('../services/cm-download')
-  const { mettreAJourPrixCartes } = await import('../cron/prix-cartes')
-  try {
-    console.log('[admin/refresh] Lancement mise à jour ETB...')
+// POST /api/admin/refresh — relance la collecte des prix ETB puis cartes
+router.post(
+  '/refresh',
+  routeAsync(async (_req, res) => {
+    console.log('[admin] Rafraîchissement des prix ETB...')
     const { ok, sans_prix } = await mettreAJourPrixDepuisCM()
-    console.log('[admin/refresh] Lancement mise à jour cartes...')
+    console.log('[admin] Rafraîchissement des prix cartes...')
     await mettreAJourPrixCartes()
     res.json({ success: true, etbMisAJour: ok, etbSansPrix: sans_prix })
-  } catch (e) {
-    res.status(500).json({ success: false, error: e instanceof Error ? e.message : 'Erreur' })
-  }
-})
+  }),
+)
 
-// GET /api/admin/users — liste des comptes (pour le panel admin)
-router.get('/users', async (_req, res) => {
-  const users = await prisma.user.findMany({
-    select: { id: true, email: true, role: true, createdAt: true },
-    orderBy: { createdAt: 'asc' },
-  })
-  res.json(users)
-})
+// GET /api/admin/users — liste des comptes
+router.get(
+  '/users',
+  routeAsync(async (_req, res) => {
+    res.json(
+      await prisma.user.findMany({
+        select: { id: true, email: true, role: true, createdAt: true },
+        orderBy: { createdAt: 'asc' },
+      }),
+    )
+  }),
+)
 
 export default router

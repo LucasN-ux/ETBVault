@@ -4,6 +4,7 @@
 
 import { chromium } from 'playwright'
 import prisma from '../db/client'
+import { aujourdhuiUtc, veille } from '../lib/dates'
 
 interface CmPrixEntry {
   idProduct: number
@@ -110,11 +111,10 @@ function calculerPrix(
 export async function mettreAJourPrixDepuisCM(): Promise<{ ok: number; sans_prix: number; inchanges: number }> {
   const prixIndex = await telechargerPrixGuide()
 
-  const aujourd = new Date()
-  aujourd.setHours(0, 0, 0, 0)
+  const aujourd = aujourdhuiUtc()
 
-  // Tous les produits ayant au moins un idProduct CM (ETB curés + catalogue ingéré).
-  const produits = await prisma.produit.findMany({
+  // Seules les ETB reliées à au moins un idProduct CM peuvent avoir un prix.
+  const etbs = await prisma.etb.findMany({
     where: { cmIdProducts: { isEmpty: false } },
     select: { id: true, cmIdProducts: true },
   })
@@ -122,7 +122,7 @@ export async function mettreAJourPrixDepuisCM(): Promise<{ ok: number; sans_prix
   let sans_prix = 0
   let inchanges = 0
 
-  for (const { id: etbId, cmIdProducts } of produits) {
+  for (const { id: etbId, cmIdProducts } of etbs) {
     const { cmPrixMoyen, cmPrixBas } = calculerPrix(prixIndex, cmIdProducts)
 
     if (cmPrixMoyen === null) {
@@ -132,7 +132,7 @@ export async function mettreAJourPrixDepuisCM(): Promise<{ ok: number; sans_prix
 
     // Dernier prix connu en base (toutes dates confondues)
     const dernierEnDB = await prisma.prixHistorique.findFirst({
-      where: { produitId: etbId, cmPrixMoyen: { not: null } },
+      where: { etbId: etbId, cmPrixMoyen: { not: null } },
       orderBy: { date: 'desc' },
       select: { date: true, cmPrixMoyen: true },
     })
@@ -145,23 +145,23 @@ export async function mettreAJourPrixDepuisCM(): Promise<{ ok: number; sans_prix
       continue
     }
 
-    // Si le prix vient d'une entrée antérieure à aujourd'hui, on insère d'abord
-    // un point "palier" à la veille pour que le graphique soit en escalier
+    // Si le dernier prix connu date d'avant aujourd'hui, on pose un palier à la
+    // veille : le graphique reste en escalier au lieu d'interpoler une pente
+    // qui n'a jamais existé.
     if (dernierEnDB && dernierEnDB.date < aujourd) {
-      const veille = new Date(aujourd)
-      veille.setDate(veille.getDate() - 1)
+      const dateVeille = veille(aujourd)
       await prisma.prixHistorique.upsert({
-        where: { produitId_date: { produitId: etbId, date: veille } },
+        where: { etbId_date: { etbId, date: dateVeille } },
         update: { cmPrixMoyen: dernierPrix, cmPrixBas: null },
-        create: { produitId: etbId, date: veille, cmPrixMoyen: dernierPrix ?? cmPrixMoyen, cmPrixBas: null },
+        create: { etbId, date: dateVeille, cmPrixMoyen: dernierPrix ?? cmPrixMoyen, cmPrixBas: null },
       })
     }
 
     // Nouveau prix du jour
     await prisma.prixHistorique.upsert({
-      where: { produitId_date: { produitId: etbId, date: aujourd } },
+      where: { etbId_date: { etbId: etbId, date: aujourd } },
       update: { cmPrixMoyen, cmPrixBas },
-      create: { produitId: etbId, date: aujourd, cmPrixMoyen, cmPrixBas },
+      create: { etbId: etbId, date: aujourd, cmPrixMoyen, cmPrixBas },
     })
 
     console.log(`[cm-download] ✓ ${etbId}: ${dernierPrix ?? '—'}€ → ${cmPrixMoyen}€`)

@@ -6,7 +6,7 @@ import { infererEre } from '../services/cm-eres'
 // Ne touche pas les produits déjà dotés d'une ère (ETB curés). Usage : npm run enrich:eres
 
 async function main(): Promise<void> {
-  const sansEre = await prisma.produit.findMany({ where: { era: null }, select: { id: true, nom: true } })
+  const sansEre = await prisma.etb.findMany({ where: { era: null }, select: { id: true, nom: true } })
   console.log(`[enrich:eres] ${sansEre.length} produits sans ère à traiter`)
 
   let majParEre = new Map<string, number>()
@@ -14,7 +14,7 @@ async function main(): Promise<void> {
   for (const p of sansEre) {
     const ere = infererEre(p.nom)
     if (!ere) { nonResolus++; continue }
-    await prisma.produit.update({ where: { id: p.id }, data: { era: ere } })
+    await prisma.etb.update({ where: { id: p.id }, data: { era: ere } })
     majParEre.set(ere, (majParEre.get(ere) ?? 0) + 1)
   }
 

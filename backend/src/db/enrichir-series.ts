@@ -10,7 +10,7 @@ import { SERIE_LABEL } from '../services/cm-series'
 const TCGDEX = 'https://api.tcgdex.net/v2/en'
 
 async function main(): Promise<void> {
-  const produits = await prisma.produit.findMany({
+  const produits = await prisma.etb.findMany({
     where: { NOT: { setId: null } },
     select: { id: true, setId: true },
   })
@@ -29,7 +29,7 @@ async function main(): Promise<void> {
   for (const p of produits) {
     const era = p.setId ? serieParSet.get(p.setId) : undefined
     if (!era) continue
-    await prisma.produit.update({ where: { id: p.id }, data: { era } })
+    await prisma.etb.update({ where: { id: p.id }, data: { era } })
     parSerie.set(era, (parSerie.get(era) ?? 0) + 1)
     n++
   }
