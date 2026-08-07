@@ -2,7 +2,10 @@
 // c'est le seul endroit qui connaît l'URL de base, le jeton et la forme des
 // erreurs renvoyées par le backend.
 
-const BASE_URL = '/api'
+// En développement, le proxy Vite renvoie /api vers localhost:3001. En
+// production le front (Vercel) et l'API (Render) sont sur deux domaines : il
+// faut l'URL absolue, fournie au build par VITE_API_URL.
+const BASE_URL = import.meta.env.VITE_API_URL ?? '/api'
 const CLE_JETON = 'etbvault_token'
 
 /**
