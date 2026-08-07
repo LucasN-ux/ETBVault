@@ -1,6 +1,6 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Icon, Mark } from './Icon'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 
 // Shell unifié : barre de nav (sticky, blur) + contenu + footer.
 // Le ticker (bande marché) est rendu par la Home elle-même (elle a les données).

@@ -1,13 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useVault } from '../hooks/useVault'
-import { useAuth } from '../context/AuthContext'
-import { fetchETBs, fetchPrixActuels, fetchPrixHistoriqueMultiple } from '../services/api'
+import { OBJET_VIDE, TABLEAU_VIDE } from '../utils/vides'
+import { useAuth } from '../hooks/useAuth'
+import { fetchEtbs, fetchPrixActuels, fetchPrixHistoriqueMultiple } from '../services/api'
 import { eur, eur0, pct } from '../utils/format'
 import { valeurHistorique } from '../utils/valeurHistorique'
 import { partagerCoffre } from '../utils/imagePartage'
 import { Icon } from '../components/Icon'
 import { BoxArt, KPI } from '../components/ui'
+import { useRequete } from '../hooks/useRequete'
 import VaultValueChart from '../components/VaultValueChart'
 
 const PALETTE = ['var(--accent)', 'var(--up)', 'var(--new)', 'oklch(0.7 0.13 320)', 'oklch(0.75 0.12 60)', 'var(--muted)']
@@ -17,28 +19,34 @@ export default function Vault() {
   const go = (p) => navigate(p)
   const { user } = useAuth()
   const { entries, addEntry, removeEntry } = useVault()
-  const [etbs, setEtbs] = useState([])
-  const [prixActuels, setPrixActuels] = useState({})
   const [formOpen, setFormOpen] = useState(false)
   const [draft, setDraft] = useState({ etbId: '', prixAchat: '', quantite: 1 })
-  const [hist, setHist] = useState({})
   const [partageEtat, setPartageEtat] = useState('idle') // idle | partagé | téléchargée
 
-  useEffect(() => {
-    fetchETBs().then(setEtbs).catch(() => {})
-    fetchPrixActuels().then(setPrixActuels).catch(() => {})
-  }, [])
+  const catalogue = useRequete(fetchEtbs)
+  const prix = useRequete(fetchPrixActuels)
 
-  // Historique de prix des produits détenus → série de valeur du coffre
-  useEffect(() => {
-    const ids = [...new Set(entries.map((e) => e.etbId))]
-    if (!ids.length) { setHist({}); return }
-    fetchPrixHistoriqueMultiple(ids).then((h) => {
-      const norm = {}
-      for (const [k, v] of Object.entries(h)) norm[k] = (v ?? []).map((p) => ({ date: String(p.date).slice(0, 10), cmPrixMoyen: p.cmPrixMoyen }))
-      setHist(norm)
-    }).catch(() => {})
-  }, [entries])
+  const etbs = catalogue.donnees ?? TABLEAU_VIDE
+  const prixActuels = prix.donnees ?? OBJET_VIDE
+
+  // Historique de prix des ETB détenues → courbe de valeur du coffre.
+  const idsDetenus = useMemo(() => [...new Set(entries.map((e) => e.etbId))], [entries])
+  const historiques = useRequete(
+    () => fetchPrixHistoriqueMultiple(idsDetenus),
+    idsDetenus.join(','),
+    { actif: idsDetenus.length > 0 },
+  )
+
+  const hist = useMemo(() => {
+    const parEtb = {}
+    for (const [id, points] of Object.entries(historiques.donnees ?? OBJET_VIDE)) {
+      parEtb[id] = (points ?? []).map((p) => ({
+        date: String(p.date).slice(0, 10),
+        cmPrixMoyen: p.cmPrixMoyen,
+      }))
+    }
+    return parEtb
+  }, [historiques.donnees])
 
   const serie = useMemo(
     () => valeurHistorique(
@@ -187,11 +195,11 @@ export default function Vault() {
           <div className="card" style={{ padding: 8 }}>
             {rows.map((r, i) => (
               <div key={r.id} className="group flex items-center gap-3.5" style={{ padding: '12px', borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                <button onClick={() => r.etb && go(`/produit/${r.etb.id}`)} className="shrink-0 surface-2 flex items-center justify-center overflow-hidden" style={{ width: 58, height: 44, borderRadius: 9 }}>
+                <button onClick={() => r.etb && go(`/etb/${r.etb.id}`)} className="shrink-0 surface-2 flex items-center justify-center overflow-hidden" style={{ width: 58, height: 44, borderRadius: 9 }}>
                   {r.etb ? <BoxArt etb={r.etb} style={{ height: 38, width: 50 }} /> : <span className="font-mono" style={{ fontSize: 9, color: 'var(--faint)' }}>{r.etbId}</span>}
                 </button>
                 <div className="min-w-0 flex-1">
-                  <button className="text-left truncate block w-full" style={{ fontSize: 14, fontWeight: 560 }} onClick={() => r.etb && go(`/produit/${r.etbId}`)}>{r.etb?.nomFr ?? r.etb?.nom ?? r.etbId}</button>
+                  <button className="text-left truncate block w-full" style={{ fontSize: 14, fontWeight: 560 }} onClick={() => r.etb && go(`/etb/${r.etbId}`)}>{r.etb?.nomFr ?? r.etb?.nom ?? r.etbId}</button>
                   <div className="font-mono" style={{ fontSize: 11.5, color: 'var(--faint)', marginTop: 2 }}>
                     {r.quantite > 1 ? `${r.quantite} × ` : ''}{eur(r.prixAchat)} · {r.dateAchat}
                   </div>

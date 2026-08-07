@@ -13,6 +13,7 @@ const PATHS = {
   trend: 'M3 17l6-6 4 4 8-8M21 7v5h-5',
   plus: 'M12 5v14M5 12h14',
   close: 'M6 6l12 12M18 6L6 18',
+  alert: 'M12 3 1.8 20.5h20.4L12 3zM12 10v4M12 17.5v.01',
   trash: 'M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13',
   chevron: 'M9 6l6 6-6 6',
   chevronDown: 'M6 9l6 6 6-6',

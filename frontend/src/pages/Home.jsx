@@ -1,13 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchETBs, fetchTendances, fetchSparklines, adminRefresh } from '../services/api'
+import { fetchEtbs, fetchTendances, fetchSparklines, adminRefresh } from '../services/api'
+import { OBJET_VIDE, TABLEAU_VIDE } from '../utils/vides'
 import { detecterMouvement } from '../utils/mouvement'
 import { eur0 } from '../utils/format'
 import { Icon } from '../components/Icon'
 import Sparkline from '../components/Sparkline'
 import VaultHomeCard from '../components/VaultHomeCard'
-import { useAuth } from '../context/AuthContext'
-import { BoxArt, MovementBadge, Price, VarNum, Segmented, Ticker, KPI, EraTag } from '../components/ui'
+import { useAuth } from '../hooks/useAuth'
+import { BoxArt, EtatErreur, EtatVide, MovementBadge, Price, VarNum, Segmented, Ticker, KPI, EraTag } from '../components/ui'
+import { useRequete } from '../hooks/useRequete'
 
 const PERIODES = [
   { value: 7, label: '7 j' },
@@ -24,7 +26,7 @@ function HeroSlab({ etb, periode, go }) {
   const up = (etb.variationPct ?? 0) >= 0
   const spark = prixSeries(etb.series, 30)
   return (
-    <button onClick={() => go(`/produit/${etb.id}`)} className="slab group w-full text-left fadeUp" style={{ animationDelay: '0.1s' }}>
+    <button onClick={() => go(`/etb/${etb.id}`)} className="slab group w-full text-left fadeUp" style={{ animationDelay: '0.1s' }}>
       <div className="slab__glare" />
       <div className="flex items-stretch">
         <div className="slab__stage shrink-0" style={{ width: '46%', minHeight: 220, padding: 22 }}>
@@ -57,12 +59,12 @@ function HeroSlab({ etb, periode, go }) {
   )
 }
 
-function TrendRow({ etb, rang, periode, go }) {
+function TrendRow({ etb, rang, go }) {
   const up = (etb.variationPct ?? 0) >= 0
   const spark = prixSeries(etb.series, 14)
   return (
     <button
-      onClick={() => go(`/produit/${etb.id}`)}
+      onClick={() => go(`/etb/${etb.id}`)}
       className="group w-full text-left flex items-center gap-4 transition-colors"
       style={{ padding: '13px 16px', borderRadius: 'var(--radius-sm)' }}
       onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
@@ -110,32 +112,34 @@ export default function Home() {
   const navigate = useNavigate()
   const go = (p) => navigate(p)
   const { user } = useAuth()
-  const [etbs, setEtbs] = useState([])
   const [periode, setPeriode] = useState(7)
-  const [tendances, setTendances] = useState([])
-  const [sparks, setSparks] = useState({})
 
-  useEffect(() => {
-    fetchETBs().then(setEtbs).catch(() => {})
-    fetchSparklines(90).then(setSparks).catch(() => {})
-  }, [])
+  const catalogue = useRequete(fetchEtbs)
+  const courbes = useRequete(fetchSparklines, 90)
+  const tendances = useRequete(fetchTendances, periode)
 
-  useEffect(() => {
-    fetchTendances(periode).then(setTendances).catch(() => {})
-  }, [periode])
-
+  const etbs = catalogue.donnees ?? TABLEAU_VIDE
   const etbMap = useMemo(() => Object.fromEntries(etbs.map((e) => [e.id, e])), [etbs])
 
+  // Le classement croise trois sources : la variation vient de /tendances, le
+  // nom et la date du catalogue, la courbe des sparklines.
   const ranked = useMemo(() => {
-    return tendances
+    const sparks = courbes.donnees ?? OBJET_VIDE
+    return (tendances.donnees ?? TABLEAU_VIDE)
       .map((t) => {
         const etb = etbMap[t.etbId]
         if (!etb) return null
-        const annee = (etb.dateSortie ?? etb.date_sortie) ? new Date(etb.dateSortie ?? etb.date_sortie).getFullYear() : ''
-        return { ...etb, annee, prixActuel: t.prixActuel, variationPct: t.variationPct, series: sparks[t.etbId] ?? [] }
+        const dateSortie = etb.dateSortie ?? etb.date_sortie
+        return {
+          ...etb,
+          annee: dateSortie ? new Date(dateSortie).getFullYear() : '',
+          prixActuel: t.prixActuel,
+          variationPct: t.variationPct,
+          series: sparks[t.etbId] ?? [],
+        }
       })
       .filter(Boolean)
-  }, [tendances, etbMap, sparks])
+  }, [tendances.donnees, etbMap, courbes.donnees])
 
   const mover = ranked[0]
   const list = ranked.slice(1, 9)
@@ -212,9 +216,22 @@ export default function Home() {
             </div>
             <div className="hr" style={{ margin: '4px 0' }} />
             <div className="flex flex-col">
-              {ranked.length === 0
-                ? <p style={{ padding: '28px 16px', color: 'var(--muted)', fontSize: 14 }}>Chargement des tendances…</p>
-                : [mover, ...list].filter(Boolean).map((e, i) => <TrendRow key={e.id} etb={e} rang={i + 1} periode={periode} go={go} />)}
+              {tendances.erreur ? (
+                <EtatErreur erreur={tendances.erreur} onReessayer={tendances.recharger} compact />
+              ) : tendances.chargement ? (
+                <p style={{ padding: '28px 16px', color: 'var(--muted)', fontSize: 14 }}>Chargement des tendances…</p>
+              ) : ranked.length === 0 ? (
+                <EtatVide
+                  titre="Pas encore de tendance"
+                  detail="Il faut au moins deux relevés de prix pour calculer une évolution."
+                  icone="trend"
+                  compact
+                />
+              ) : (
+                [mover, ...list]
+                  .filter(Boolean)
+                  .map((e, i) => <TrendRow key={e.id} etb={e} rang={i + 1} go={go} />)
+              )}
             </div>
           </div>
           <button onClick={() => go('/catalogue')} className="ulink mt-5 inline-flex items-center gap-1.5" style={{ fontSize: 14 }}>

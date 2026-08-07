@@ -1,13 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { fetchETB, fetchCartes, fetchPrixHistorique } from '../services/api'
+import { fetchEtb, fetchCartes, fetchPrixHistorique } from '../services/api'
+import { TABLEAU_VIDE } from '../utils/vides'
 import { detecterMouvement } from '../utils/mouvement'
 import { eur, eur0, dateFr, hueFromId } from '../utils/format'
 import { Icon } from '../components/Icon'
 import PriceChart from '../components/PriceChart'
 import MovementDetail from '../components/MovementDetail'
 import SeriesSidebar from '../components/SeriesSidebar'
-import { BoxArt, MovementBadge, Price, EraTag, SearchInput } from '../components/ui'
+import { BoxArt, EtatErreur, MovementBadge, Price, EraTag, SearchInput } from '../components/ui'
+import { useRequete } from '../hooks/useRequete'
 
 const RARETE_ORDER = [
   'Special Illustration Rare', 'Hyper Rare', 'Illustration Rare', 'Ultra Rare',
@@ -59,27 +61,29 @@ export default function ETBDetail() {
   const navigate = useNavigate()
   const go = (p) => navigate(p)
 
-  const [etb, setEtb] = useState(null)
-  const [cartes, setCartes] = useState([])
-  const [historique, setHistorique] = useState([])
-  const [loadingEtb, setLoadingEtb] = useState(true)
-  const [loadingCartes, setLoadingCartes] = useState(false)
-  const [erreur, setErreur] = useState(null)
+  const requeteEtb = useRequete(fetchEtb, id)
+  const requeteCartes = useRequete(fetchCartes, id)
+  const requetePrix = useRequete(fetchPrixHistorique, id)
+
+  const etb = requeteEtb.donnees
+  const cartes = requeteCartes.donnees ?? TABLEAU_VIDE
+  const historique = requetePrix.donnees ?? TABLEAU_VIDE
+  const loadingCartes = requeteCartes.chargement
+
   const [rarete, setRarete] = useState(null)
   const [q, setQ] = useState('')
   const [seriesOpen, setSeriesOpen] = useState(false)
 
-  useEffect(() => {
-    setLoadingEtb(true); setEtb(null); setErreur(null)
-    fetchETB(id).then(setEtb).catch(() => setErreur('ETB introuvable.')).finally(() => setLoadingEtb(false))
-  }, [id])
-
-  useEffect(() => {
-    if (!etb) return
-    setCartes([]); setRarete(null); setQ(''); setLoadingCartes(true)
-    fetchCartes(id).then(setCartes).catch(() => {}).finally(() => setLoadingCartes(false))
-    fetchPrixHistorique(id).then(setHistorique).catch(() => {})
-  }, [id, etb])
+  // Les filtres de cartes portent sur l'ETB courante : on repart à zéro en
+  // changeant de fiche, sinon une rareté absente du nouveau set masque tout.
+  // Ajustement pendant le rendu plutôt qu'en effet — React réexécute
+  // immédiatement sans commiter l'écran intermédiaire.
+  const [idFiltre, setIdFiltre] = useState(id)
+  if (idFiltre !== id) {
+    setIdFiltre(id)
+    setRarete(null)
+    setQ('')
+  }
 
   const valeurSet = useMemo(() => cartes.reduce((s, c) => s + Number(c.prixMarche ?? 0), 0), [cartes])
   const raretes = useMemo(() => {
@@ -97,11 +101,15 @@ export default function ETBDetail() {
   const prixSortie = etb ? Number(etb.prixSortie ?? etb.prix_sortie ?? 0) : 0
   const prixActuel = historique.length ? Number(historique[historique.length - 1].cmPrixMoyen) : prixSortie
 
-  if (loadingEtb) {
+  if (requeteEtb.chargement) {
     return <div style={{ padding: 80, textAlign: 'center', color: 'var(--muted)' }}>Chargement…</div>
   }
-  if (erreur || !etb) {
-    return <div style={{ padding: 80, textAlign: 'center', color: 'var(--down)' }}>{erreur || 'ETB introuvable.'}</div>
+  if (requeteEtb.erreur || !etb) {
+    return (
+      <div className="mx-auto" style={{ maxWidth: 560, padding: '60px clamp(18px,4vw,40px)' }}>
+        <EtatErreur erreur={requeteEtb.erreur} onReessayer={requeteEtb.recharger} />
+      </div>
+    )
   }
 
   const cmUrl = etb.cmUrl ?? etb.cm_url
@@ -113,7 +121,7 @@ export default function ETBDetail() {
   return (
     <div className="lg:flex" style={{ position: 'relative', zIndex: 1 }}>
       {/* rail gauche : navigateur de séries (drawer sur mobile) */}
-      <SeriesSidebar isOpen={seriesOpen} onClose={() => setSeriesOpen(false)} currentId={id} type={etb.type ?? 'ETB'} />
+      <SeriesSidebar isOpen={seriesOpen} onClose={() => setSeriesOpen(false)} currentId={id} />
       {seriesOpen && (
         <div className="fixed inset-0 lg:hidden" onClick={() => setSeriesOpen(false)} style={{ background: 'oklch(0 0 0 / 0.6)', zIndex: 35 }} />
       )}
