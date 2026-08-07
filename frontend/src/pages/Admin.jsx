@@ -1,17 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { fetchUsers, adminRefresh } from '../services/api'
+import { useRequete } from '../hooks/useRequete'
 import { dateFr } from '../utils/format'
 import { Icon } from '../components/Icon'
+import { EtatErreur } from '../components/ui'
 
-// Panel admin (réservé au rôle ADMIN) — V1 : liste des comptes + relance des prix.
+// Panel admin (réservé au rôle ADMIN) — liste des comptes + relance des prix.
 export default function Admin() {
-  const [users, setUsers] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { donnees, chargement: loading, erreur, recharger } = useRequete(fetchUsers)
+  const users = donnees ?? []
   const [refreshState, setRefreshState] = useState('idle') // idle | loading | ok | error
-
-  useEffect(() => {
-    fetchUsers().then(setUsers).catch(() => {}).finally(() => setLoading(false))
-  }, [])
 
   async function relancerPrix() {
     if (refreshState === 'loading') return
@@ -51,7 +49,11 @@ export default function Admin() {
           <h2 className="display" style={{ fontSize: 17 }}>Comptes</h2>
           <span className="font-mono" style={{ fontSize: 12, color: 'var(--faint)' }}>{users.length}</span>
         </div>
-        {loading ? (
+        {erreur ? (
+          <div style={{ padding: 8 }}>
+            <EtatErreur erreur={erreur} onReessayer={recharger} compact />
+          </div>
+        ) : loading ? (
           <p style={{ padding: '20px 16px', color: 'var(--muted)', fontSize: 13.5 }}>Chargement…</p>
         ) : (
           <div className="flex flex-col">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import * as api from '../services/api'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 import { lireVaultLocal, ecrireVaultLocal } from '../utils/vaultLocal'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -12,21 +12,42 @@ import { lireVaultLocal, ecrireVaultLocal } from '../utils/vaultLocal'
 
 export function useVault() {
   const { user, loading: authLoading, vaultVersion } = useAuth()
-  const [entries, setEntries] = useState([])
-  const [loading, setLoading] = useState(true)
+  // Le coffre local est lisible immédiatement : on en part comme état initial
+  // plutôt que de le poser depuis un effet.
+  const [entriesCompte, setEntriesCompte] = useState(null)
+  const [entriesLocales, setEntriesLocales] = useState(lireVaultLocal)
+  const [chargementCompte, setChargementCompte] = useState(false)
+
+  const entries = user ? (entriesCompte ?? []) : entriesLocales
+  const loading = authLoading || (user ? entriesCompte === null || chargementCompte : false)
 
   const reload = useCallback(() => {
     if (authLoading) return Promise.resolve()
-    if (user) {
-      setLoading(true)
-      return api.fetchVault().then(setEntries).catch(() => setEntries([])).finally(() => setLoading(false))
+    if (!user) {
+      setEntriesLocales(lireVaultLocal())
+      return Promise.resolve()
     }
-    setEntries(lireVaultLocal())
-    setLoading(false)
-    return Promise.resolve()
+    setChargementCompte(true)
+    return api
+      .fetchVault()
+      .then(setEntriesCompte)
+      .catch(() => setEntriesCompte([]))
+      .finally(() => setChargementCompte(false))
+    // `vaultVersion` n'est pas lu dans le corps : c'est un compteur que la
+    // fusion du coffre local incrémente pour forcer un rechargement. Le retirer
+    // casserait la reprise des positions locales à la connexion.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading, vaultVersion])
 
-  useEffect(() => { reload() }, [reload])
+  useEffect(() => {
+    // `reload` marque le chargement de façon synchrone, et c'est voulu : sans
+    // ça, le coffre du compte s'afficherait vide le temps de la requête, comme
+    // si l'utilisateur n'avait aucune position.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    reload()
+  }, [reload])
+
+  const setEntries = user ? setEntriesCompte : setEntriesLocales
 
   async function addEntry({ etbId, prixAchat, quantite, dateAchat }) {
     const base = {

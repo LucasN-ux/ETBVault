@@ -1,0 +1,6 @@
+// Compilation de production : le tsconfig racine inclut les tests (pour le
+// typecheck et l'éditeur), le build les laisse de côté.
+{
+  "extends": "./tsconfig.json",
+  "exclude": ["node_modules", "dist", "src/db/seed.js", "src/db/seedPrix.js", "src/**/*.test.ts"]
+}

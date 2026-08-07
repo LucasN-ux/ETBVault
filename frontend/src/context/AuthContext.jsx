@@ -1,10 +1,11 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import * as api from '../services/api'
 import { lireVaultLocal, viderVaultLocal } from '../utils/vaultLocal'
+import { AuthContext } from './authContexte'
 
-// Contexte d'authentification : token JWT en localStorage, profil restauré au chargement.
-// Gère aussi la fusion du coffre anonyme (localStorage) vers le compte à la connexion.
-const AuthContext = createContext(null)
+// Authentification : jeton JWT en localStorage, profil restauré au chargement.
+// Gère aussi la fusion du coffre anonyme vers le compte à la connexion.
+// Le hook de consommation est dans hooks/useAuth.js.
 
 async function importerLocalesVersCompte(locales) {
   for (const e of locales) {
@@ -14,19 +15,22 @@ async function importerLocalesVersCompte(locales) {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  // Sans jeton il n'y a rien à restaurer : on démarre directement « chargé »,
+  // plutôt que de repasser loading à false depuis l'effet.
+  const [loading, setLoading] = useState(() => Boolean(api.lireJeton()))
   const [pendingImport, setPendingImport] = useState(0) // nb de positions locales en attente de confirmation
   const [vaultVersion, setVaultVersion] = useState(0)   // bump → force le rechargement du coffre
 
-  // Restaure la session si un token est présent.
+  // Restaure la session si un jeton est présent. Un jeton refusé (401) est
+  // effacé ; une panne réseau ne l'est pas, sinon un backend momentanément
+  // absent déconnecterait l'utilisateur pour de bon.
   useEffect(() => {
-    if (!api.getToken()) {
-      setLoading(false)
-      return
-    }
+    if (!api.lireJeton()) return
     api.fetchMe()
       .then((d) => setUser(d.user))
-      .catch(() => api.setToken(null))
+      .catch((e) => {
+        if (e instanceof api.ApiError && e.estAuth) api.ecrireJeton(null)
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -47,7 +51,7 @@ export function AuthProvider({ children }) {
 
   async function login(email, motDePasse) {
     const { token, user } = await api.login(email, motDePasse)
-    api.setToken(token)
+    api.ecrireJeton(token)
     await fusionnerCoffreLocal()
     setUser(user)
     return user
@@ -55,14 +59,14 @@ export function AuthProvider({ children }) {
 
   async function register(email, motDePasse) {
     const { token, user } = await api.register(email, motDePasse)
-    api.setToken(token)
+    api.ecrireJeton(token)
     await fusionnerCoffreLocal()
     setUser(user)
     return user
   }
 
   function logout() {
-    api.setToken(null)
+    api.ecrireJeton(null)
     setUser(null)
     setPendingImport(0)
   }
@@ -83,10 +87,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   )
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth doit être utilisé dans <AuthProvider>')
-  return ctx
 }
