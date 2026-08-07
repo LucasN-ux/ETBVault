@@ -27,12 +27,9 @@ Le schéma n'est pas à créer à la main : le conteneur applique
 `prisma migrate deploy` à chaque démarrage, et la migration `0_init` crée les
 cinq tables.
 
-Pour peupler le catalogue, depuis un poste ayant la chaîne Neon dans son `.env` :
-
-```bash
-npm --prefix backend run seed            # 76 ETB
-npm --prefix backend run backfill:cmids  # lien vers Cardmarket
-```
+Le catalogue non plus : au premier démarrage, si la base est vide, l'API insère
+les 76 ETB et leurs liens Cardmarket toute seule. Aux démarrages suivants elle
+constate que le catalogue existe et ne touche à rien.
 
 Ne **pas** lancer `seed:prix` : il génère des prix fictifs.
 
