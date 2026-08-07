@@ -1,4 +1,5 @@
 import app from './app'
+import { amorcerCatalogueSiVide } from './db/amorcage'
 import { config } from './lib/config'
 import { mettreAJourPrixCartes, planifierPrixCartes } from './cron/prix-cartes'
 import { planifierPrixETB } from './cron/prix-etb'
@@ -14,10 +15,20 @@ app.listen(config.port, () => {
     console.log('[cron] Tâches planifiées désactivées (CRONS_ACTIFS=false)')
   }
 
-  if (config.collecteAuDemarrage) {
-    void collecterMaintenant()
-  }
+  void demarrer()
 })
+
+async function demarrer(): Promise<void> {
+  // Un échec d'amorçage ne doit pas empêcher l'API de servir : elle répondra
+  // un catalogue vide, ce qui reste préférable à un service qui ne démarre pas.
+  try {
+    await amorcerCatalogueSiVide()
+  } catch (err) {
+    console.error('[amorçage] Échec :', err instanceof Error ? err.message : err)
+  }
+
+  if (config.collecteAuDemarrage) await collecterMaintenant()
+}
 
 /**
  * Collecte immédiate, hors planification.
