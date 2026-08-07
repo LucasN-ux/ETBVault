@@ -39,7 +39,7 @@ function franciser(nom: string): string {
 }
 
 async function main(): Promise<void> {
-  const produits = await prisma.produit.findMany({ select: { id: true, nom: true, type: true, setId: true } })
+  const produits = await prisma.etb.findMany({ select: { id: true, nom: true, type: true, setId: true } })
   const setIds = [...new Set(produits.map((p) => p.setId).filter((s): s is string => !!s))]
   console.log(`[enrich:noms] ${produits.length} produits · ${setIds.length} sets (noms FR TCGdex)`)
 
@@ -61,7 +61,7 @@ async function main(): Promise<void> {
       nomFr = franciser(p.nom)
       francises++
     }
-    await prisma.produit.update({ where: { id: p.id }, data: { nomFr } })
+    await prisma.etb.update({ where: { id: p.id }, data: { nomFr } })
   }
   console.log(`[enrich:noms] ${avecSet} via set FR TCGdex · ${francises} par francisation du nom EN`)
 }

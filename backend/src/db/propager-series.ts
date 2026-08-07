@@ -18,7 +18,7 @@ async function main(): Promise<void> {
     if (p.idExpansion) expansionParId.set(p.idProduct, p.idExpansion)
   }
 
-  const produits = await prisma.produit.findMany({ select: { id: true, era: true, cmIdProducts: true } })
+  const produits = await prisma.etb.findMany({ select: { id: true, era: true, cmIdProducts: true } })
 
   // Série dominante par extension (parmi les produits déjà classés)
   const serieParExpansion = new Map<number, Map<string, number>>()
@@ -45,12 +45,12 @@ async function main(): Promise<void> {
     const exp = expansionDuProduit.get(p.id)
     const era = exp ? serieDominante.get(exp) : undefined
     if (!era) continue
-    await prisma.produit.update({ where: { id: p.id }, data: { era } })
+    await prisma.etb.update({ where: { id: p.id }, data: { era } })
     n++
   }
   console.log(`[propager:series] ${n} produits classés par propagation d'extension`)
 
-  const restants = await prisma.produit.count({ where: { era: null } })
+  const restants = await prisma.etb.count({ where: { era: null } })
   console.log(`[propager:series] reste ${restants} produits sans série (aucune extension classée)`)
 }
 
