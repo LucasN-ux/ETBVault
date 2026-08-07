@@ -213,9 +213,15 @@ async function seed(): Promise<void> {
   console.log(`\n\n✓ ${ETBS.length} ETB insérées.`)
 }
 
-seed()
-  .then(() => prisma.$disconnect())
-  .catch((e) => {
-    console.error(e)
-    return prisma.$disconnect().finally(() => process.exit(1))
-  })
+export { seed as semerCatalogue }
+
+// Exécution directe uniquement (`npm run seed`). Importé, ce module n'expose
+// que la fonction — l'amorçage au démarrage du serveur s'en sert.
+if (require.main === module) {
+  seed()
+    .then(() => prisma.$disconnect())
+    .catch((e) => {
+      console.error(e)
+      return prisma.$disconnect().finally(() => process.exit(1))
+    })
+}
