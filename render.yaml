@@ -25,10 +25,6 @@ services:
         generateValue: true
       - key: ADMIN_EMAIL
         sync: false
-      - key: CM_EMAIL
-        sync: false
-      - key: CM_PASSWORD
-        sync: false
 
       # ── Origines autorisées à appeler l'API ──────────────────────────────
       # À remplacer par le domaine Vercel réel une fois le front déployé.

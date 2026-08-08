@@ -1,18 +1,17 @@
 import 'dotenv/config'
 import prisma from './client'
-import { fetchCmJson } from '../services/cm-session'
+import { telechargerJsonCm, URL_CATALOGUE_PRODUITS } from '../services/cm-json'
 
 // Propage la série aux produits non classés via l'extension CM (idExpansion) :
 // les produits d'une même extension partagent la même série. Si au moins un
 // produit de l'extension a une série, on l'applique aux autres.
 // Usage : npm run propager:series
 
-const CM_PRODUCTS_URL = 'https://downloads.s3.cardmarket.com/productCatalog/productList/products_nonsingles_6.json'
 
 interface CmProduct { idProduct: number; idExpansion?: number }
 
 async function main(): Promise<void> {
-  const data = await fetchCmJson<{ products?: CmProduct[] }>(CM_PRODUCTS_URL)
+  const data = await telechargerJsonCm<{ products?: CmProduct[] }>(URL_CATALOGUE_PRODUITS)
   const expansionParId = new Map<number, number>()
   for (const p of data.products ?? []) {
     if (p.idExpansion) expansionParId.set(p.idProduct, p.idExpansion)
