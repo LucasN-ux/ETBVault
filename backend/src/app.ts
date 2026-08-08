@@ -16,6 +16,7 @@ import authRouter from './routes/auth'
 import etbsRouter from './routes/etbs'
 import marcheRouter from './routes/marche'
 import prixRouter from './routes/prix'
+import tachesRouter from './routes/taches'
 import vaultRouter from './routes/vault'
 
 // Ce fichier ne fait que du câblage : middlewares, montage des routeurs, gestion
@@ -95,6 +96,10 @@ app.get('/api/routes', (_req, res) => {
 app.use('/api/auth', authRouter)
 app.use('/api/vault', vaultRouter)
 app.use('/api/admin', adminRouter)
+
+// Déclencheur de collecte : monté seulement si un secret est configuré. Sans
+// secret, la route n'existe pas du tout — rien à deviner, rien à forcer.
+if (config.cronSecret) app.use('/api/taches', tachesRouter)
 app.use('/api', marcheRouter)
 app.use('/api/etbs', etbsRouter)
 app.use('/api/etbs/:id/prix', prixRouter)
