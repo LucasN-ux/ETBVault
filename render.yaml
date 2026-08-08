@@ -31,6 +31,12 @@ services:
       - key: ORIGINES_AUTORISEES
         sync: false
 
+      # Secret du déclencheur de collecte (POST /api/taches/collecte-prix).
+      # Render le génère ; le recopier dans les secrets GitHub du dépôt sous le
+      # nom CRON_SECRET. Non renseigné, la route n'est pas montée.
+      - key: CRON_SECRET
+        generateValue: true
+
       # ── Collecte des prix ────────────────────────────────────────────────
       # Le plan gratuit met le service en veille après inactivité : les tâches
       # planifiées dans le processus ne partiraient pas de façon fiable, et un

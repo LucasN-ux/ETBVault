@@ -46,4 +46,13 @@ export const config = {
    * pas : utiliser un planificateur externe qui appelle /api/admin/refresh.
    */
   cronsActifs: booleen(process.env['CRONS_ACTIFS'], true),
+
+  /**
+   * Secret partagé du déclencheur de collecte (`POST /api/taches/collecte-prix`).
+   *
+   * Destiné à un planificateur externe, seule façon fiable de tenir un rythme
+   * quotidien quand l'hébergeur met le service en veille. Non renseigné, la
+   * route n'existe pas — elle n'est montée que si ce secret est défini.
+   */
+  cronSecret: process.env['CRON_SECRET'] ?? '',
 } as const

@@ -1,0 +1,55 @@
+# Collecte quotidienne des prix.
+#
+# Le cron interne au serveur ne suffit pas : l'hébergement gratuit met le
+# service en veille faute de trafic, et une tâche planifiée dans un processus
+# endormi ne part jamais. Un appel venu de l'extérieur le réveille et déclenche
+# le travail.
+#
+# Le secret vit dans les secrets du dépôt, jamais dans le code ni dans le site.
+
+name: Collecte des prix
+
+on:
+  schedule:
+    # 05:15 UTC — après la régénération nocturne du Price Guide Cardmarket.
+    # GitHub interprète toujours cette expression en UTC.
+    - cron: '15 5 * * *'
+  # Permet de lancer la collecte à la demande depuis l'onglet Actions.
+  workflow_dispatch:
+
+jobs:
+  collecte:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déclencher la collecte
+        env:
+          URL_API: ${{ vars.URL_API }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${URL_API}" ] || [ -z "${CRON_SECRET}" ]; then
+            echo "URL_API (variable) ou CRON_SECRET (secret) manquant." >&2
+            exit 1
+          fi
+
+          # --max-time généreux : le service dort et doit d'abord se réveiller,
+          # puis télécharger 15 Mo de Price Guide.
+          code=$(curl -sS -o reponse.json -w '%{http_code}' \
+            --max-time 600 --retry 2 --retry-delay 30 --retry-connrefused \
+            -X POST "${URL_API}/api/taches/collecte-prix" \
+            -H "X-Cron-Secret: ${CRON_SECRET}")
+
+          echo "Statut HTTP : ${code}"
+          cat reponse.json
+          echo
+
+          # 404 = secret refusé (la route se fait passer pour inexistante).
+          if [ "${code}" = "404" ]; then
+            echo "Secret refusé, ou déclencheur non configuré côté serveur." >&2
+            exit 1
+          fi
+          if [ "${code}" != "200" ]; then
+            echo "La collecte a échoué." >&2
+            exit 1
+          fi
