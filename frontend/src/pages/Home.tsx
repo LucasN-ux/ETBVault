@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchEtbs, fetchTendances, fetchSparklines, adminRefresh } from '../services/api'
+import { fetchEtbs, fetchTendances, fetchSparklines } from '../services/api'
 import { OBJET_VIDE, TABLEAU_VIDE } from '../utils/vides'
 import { detecterMouvement } from '../utils/mouvement'
 import { eur0 } from '../utils/format'
 import { Icon } from '../components/Icon'
 import Sparkline from '../components/Sparkline'
 import VaultHomeCard from '../components/VaultHomeCard'
-import { useAuth } from '../hooks/useAuth'
 import { BoxArt, EtatErreur, EtatVide, MovementBadge, Price, VarNum, Segmented, Ticker, KPI, EraTag } from '../components/ui'
 import { useRequete } from '../hooks/useRequete'
 import type { Etb, PointSparkline } from '../types/domaine'
@@ -103,27 +102,12 @@ function TrendRow({ etb, rang, go }: { etb: EtbClassee; rang: number; go: (chemi
   )
 }
 
-// Bouton admin : relance la collecte des prix (cron CM + cartes). Réservé ADMIN.
-function RefreshButton() {
-  const [state, setState] = useState('idle') // idle | loading | ok | error
-  async function run() {
-    if (state === 'loading') return
-    setState('loading')
-    try { await adminRefresh(); setState('ok') } catch { setState('error') }
-    finally { setTimeout(() => setState('idle'), 5000) }
-  }
-  const label = { idle: 'Mettre à jour les prix', loading: 'Mise à jour…', ok: 'Prix à jour ✓', error: 'Échec — réessayer' }[state]
-  return (
-    <button onClick={run} disabled={state === 'loading'} className="btn btn-ghost" style={{ padding: '13px 22px', fontSize: 15 }} title="Relancer la collecte des prix (admin)">
-      <Icon name="refresh" size={17} className={state === 'loading' ? 'animate-spin' : ''} /> {label}
-    </button>
-  )
-}
+// La collecte des prix n'est plus déclenchable depuis le site : elle tourne
+// seule une fois par jour, via un appel externe protégé par un secret.
 
 export default function Home() {
   const navigate = useNavigate()
   const go = (chemin: string) => navigate(chemin)
-  const { user } = useAuth()
   const [periode, setPeriode] = useState<Periode>(7)
 
   const catalogue = useRequete(fetchEtbs)
@@ -195,7 +179,6 @@ export default function Home() {
                 <button className="btn btn-ghost" style={{ padding: '13px 22px', fontSize: 15 }} onClick={() => go('/vault')}>
                   <Icon name="vault" size={17} /> Mon Vault
                 </button>
-                {user?.role === 'ADMIN' && <RefreshButton />}
               </div>
             </div>
             <div className="mt-10 lg:mt-0">

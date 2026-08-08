@@ -1,30 +1,17 @@
-import { useState } from 'react'
-import { fetchUsers, adminRefresh } from '../services/api'
+import { fetchUsers } from '../services/api'
 import { useRequete } from '../hooks/useRequete'
 import { dateFr } from '../utils/format'
 import { Icon } from '../components/Icon'
 import { EtatErreur } from '../components/ui'
 
-// Panel admin (réservé au rôle ADMIN) — liste des comptes + relance des prix.
+// Panel admin (réservé au rôle ADMIN) — liste des comptes.
+//
+// La collecte des prix ne s'y déclenche pas : elle tourne seule une fois par
+// jour, appelée de l'extérieur avec un secret partagé. Rien dans le site ne
+// peut la lancer.
 export default function Admin() {
   const { donnees, chargement: loading, erreur, recharger } = useRequete(fetchUsers)
   const users = donnees ?? []
-  const [refreshState, setRefreshState] = useState('idle') // idle | loading | ok | error
-
-  async function relancerPrix() {
-    if (refreshState === 'loading') return
-    setRefreshState('loading')
-    try {
-      await adminRefresh()
-      setRefreshState('ok')
-    } catch {
-      setRefreshState('error')
-    } finally {
-      setTimeout(() => setRefreshState('idle'), 5000)
-    }
-  }
-
-  const refreshLabel = { idle: 'Relancer la collecte des prix', loading: 'Mise à jour…', ok: 'Prix mis à jour ✓', error: 'Échec — réessayer' }[refreshState]
 
   return (
     <div className="mx-auto" style={{ maxWidth: 900, padding: 'clamp(24px,4vw,44px) clamp(18px,4vw,40px) 60px' }}>
@@ -33,15 +20,6 @@ export default function Admin() {
         <h1 className="display" style={{ fontSize: 'clamp(26px,3vw,36px)' }}>Administration</h1>
       </div>
       <p style={{ fontSize: 13.5, color: 'var(--muted)', marginBottom: 28 }}>Réservé aux administrateurs.</p>
-
-      {/* Actions */}
-      <div className="card" style={{ padding: 'clamp(18px,2.5vw,24px)', marginBottom: 18 }}>
-        <h2 className="display" style={{ fontSize: 17, marginBottom: 4 }}>Données de prix</h2>
-        <p style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 14 }}>Relance la collecte Cardmarket (ETB) + TCGdex (cartes).</p>
-        <button onClick={relancerPrix} disabled={refreshState === 'loading'} className="btn btn-ghost" style={{ padding: '10px 16px', fontSize: 14 }}>
-          <Icon name="refresh" size={16} className={refreshState === 'loading' ? 'animate-spin' : ''} /> {refreshLabel}
-        </button>
-      </div>
 
       {/* Comptes */}
       <div className="card" style={{ padding: 8 }}>
