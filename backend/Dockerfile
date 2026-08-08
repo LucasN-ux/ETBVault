@@ -1,15 +1,18 @@
-# Image officielle Playwright : elle embarque Chromium et toutes ses
-# dépendances système. C'est la raison d'être de ce Dockerfile — la collecte
-# des prix ouvre un navigateur pour télécharger le Price Guide Cardmarket, et
-# une image Node nue ne peut pas le lancer (librairies graphiques absentes).
-#
-# La version doit rester alignée sur celle de playwright dans package.json.
-FROM mcr.microsoft.com/playwright:v1.60.0-jammy
+# Image Node standard. Le service partait auparavant de l'image Playwright
+# (~2 Go) parce que la collecte des prix lançait Chromium pour se connecter à
+# Cardmarket. Les exports Cardmarket étant publics, un simple fetch suffit :
+# plus de navigateur, plus d'identifiants, et une image assez légère pour
+# tenir dans les 512 Mo d'un plan gratuit.
+FROM node:22-bookworm-slim AS build
+
+# Prisma a besoin d'OpenSSL pour son moteur de requêtes.
+RUN apt-get update && apt-get install -y --no-install-recommends openssl \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Couche de dépendances séparée : elle n'est reconstruite que si les
-# manifestes changent, pas à chaque modification du code.
+# Couche de dépendances séparée : reconstruite seulement si les manifestes
+# changent, pas à chaque modification du code.
 COPY package.json package-lock.json ./
 RUN npm ci
 
