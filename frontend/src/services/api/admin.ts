@@ -6,14 +6,3 @@ import { appelApi } from './client'
 export function fetchUsers(): Promise<UtilisateurAdmin[]> {
   return appelApi<UtilisateurAdmin[]>('/admin/users', { auth: true })
 }
-
-export interface ResultatRefresh {
-  success: boolean
-  etbMisAJour: number
-  etbSansPrix: number
-}
-
-/** Relance la collecte des prix (Cardmarket puis TCGdex). Peut durer. */
-export function adminRefresh(): Promise<ResultatRefresh> {
-  return appelApi<ResultatRefresh>('/admin/refresh', { methode: 'POST', auth: true })
-}

@@ -2,24 +2,14 @@ import { Router } from 'express'
 import prisma from '../db/client'
 import { routeAsync } from '../lib/route-async'
 import { requireAdmin } from '../middleware/auth'
-import { mettreAJourPrixCartes } from '../cron/prix-cartes'
-import { mettreAJourPrixDepuisCM } from '../services/cm-download'
 
 // Administration : tout le routeur est réservé au rôle ADMIN.
 const router = Router()
 router.use(requireAdmin)
 
-// POST /api/admin/refresh — relance la collecte des prix ETB puis cartes
-router.post(
-  '/refresh',
-  routeAsync(async (_req, res) => {
-    console.log('[admin] Rafraîchissement des prix ETB...')
-    const { ok, sans_prix } = await mettreAJourPrixDepuisCM()
-    console.log('[admin] Rafraîchissement des prix cartes...')
-    await mettreAJourPrixCartes()
-    res.json({ success: true, etbMisAJour: ok, etbSansPrix: sans_prix })
-  }),
-)
+// La collecte des prix ne se déclenche pas ici. Elle vit dans routes/taches.ts,
+// derrière un secret partagé, et n'est appelée que par le planificateur
+// externe : rien de joignable depuis le site, même par un compte ADMIN.
 
 // GET /api/admin/users — liste des comptes
 router.get(
