@@ -37,10 +37,7 @@ Ne **pas** lancer `seed:prix` : il génère des prix fictifs.
 
 ## 2. Render — API
 
-Le service se déploie **par Docker**, pas en runtime Node. C'est nécessaire :
-la collecte des prix ouvre Chromium pour télécharger le Price Guide Cardmarket,
-et l'image Node standard n'a pas les librairies système pour le lancer.
-`backend/Dockerfile` part de l'image officielle Playwright.
+Le service se déploie **par Docker** : c'est ce que décrit `render.yaml`.
 
 1. **New → Blueprint**, pointer sur le dépôt : `render.yaml` est détecté.
 2. Renseigner les variables marquées `sync: false` :
@@ -48,8 +45,8 @@ et l'image Node standard n'a pas les librairies système pour le lancer.
    | Variable | Valeur |
    |---|---|
    | `DATABASE_URL` | chaîne pooled de Neon |
+   | `DIRECT_URL` | chaîne directe de Neon |
    | `ADMIN_EMAIL` | l'email qui deviendra ADMIN à l'inscription |
-   | `CM_EMAIL`, `CM_PASSWORD` | identifiants Cardmarket |
    | `ORIGINES_AUTORISEES` | à remplir après l'étape 3 |
 
    `JWT_SECRET` est généré par Render.
@@ -115,9 +112,8 @@ que `VITE_API_URL` est absente ou fausse.
 ## Points à connaître
 
 **Le plan gratuit Render s'endort** après quinze minutes sans trafic. Le
-premier appel réveille le service et prend plusieurs dizaines de secondes —
-l'image Playwright est lourde. Le front affichera son état d'erreur en
-attendant.
+premier appel réveille le service et prend une trentaine de secondes. Le front
+affichera son état d'erreur en attendant.
 
 **Les migrations sont rejouées à chaque démarrage** du conteneur.
 `migrate deploy` est idempotent et ne touche pas aux données.

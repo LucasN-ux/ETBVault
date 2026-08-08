@@ -1,6 +1,6 @@
 // Cron job quotidien — mise à jour des prix ETB via le Price Guide Cardmarket
 // Stratégie : téléchargement du fichier JSON officiel CM (légal, 1 seul appel/jour)
-//   - Connexion CM avec les identifiants .env (CM_EMAIL + CM_PASSWORD)
+//   - Export public, aucun identifiant requis
 //   - Planifié à 07:00 heure Paris (le fichier CM est régénéré dans la nuit)
 //   - Met à jour un point par ETB et par jour dans prix_historique
 
